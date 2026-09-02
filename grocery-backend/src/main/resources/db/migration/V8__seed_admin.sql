@@ -1,0 +1,2 @@
+INSERT INTO users (username, email, password, full_name, phone, role)
+VALUES ('admin', 'admin@groceryshop.com', '$2a$10$w9wnijBkFsRVxVOmP9F1X.NKNW48/BwZsThXnrxO5mss5KbKoCCKa', 'Store Admin', '+919876543200', 'ADMIN');
