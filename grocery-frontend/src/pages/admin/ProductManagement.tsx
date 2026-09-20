@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { FolderOpen, PackagePlus, Pencil, Trash2 } from 'lucide-react'
+import { FolderOpen, PackagePlus, Pencil, RefreshCw, Trash2 } from 'lucide-react'
 import { productApi } from '../../api/catalog'
 import { getErrorMessage } from '../../api/auth'
 import { useProducts, useCategories, useSuppliers } from '../../hooks/useCatalog'
@@ -72,6 +72,13 @@ export default function ProductManagement() {
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold text-gray-900">Products</h2>
         <div className="flex items-center gap-2">
+          <button
+            onClick={refresh}
+            title="Refresh stock data"
+            className="p-2 rounded-md border border-gray-300 text-gray-500 hover:text-green-700 hover:border-green-600"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
           <Link
             to="/admin/categories"
             className="inline-flex items-center gap-1 px-4 py-2 rounded-md border border-green-600 text-green-700 hover:bg-green-50 font-medium text-sm"
@@ -105,14 +112,37 @@ export default function ProductManagement() {
             </tr>
           </thead>
           <tbody>
-            {products?.map((product) => (
-              <tr key={product.id} className={`border-b last:border-0 ${product.stock <= 0 || product.lowStock ? 'bg-red-600' : 'hover:bg-gray-50'}`}>
-                <td className="px-4 py-3">
-                  <span className={`font-medium ${product.stock <= 0 || product.lowStock ? 'text-white' : 'text-gray-900'}`}>{product.name}</span>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`font-mono text-xs ${product.stock <= 0 || product.lowStock ? 'text-red-100' : 'text-gray-500'}`}>{product.code ?? '—'}</span>
-                </td>
+            {products?.map((product) => {
+              const danger = product.stock <= 0 || product.lowStock
+              const recent =
+                !!product.restockAt &&
+                Date.now() - Date.parse(product.restockAt) < 5 * 60 * 1000
+              const sub = danger ? 'text-red-100' : recent ? 'text-amber-800' : 'text-gray-500'
+              return (
+                <tr
+                  key={product.id}
+                  className={`border-b last:border-0 ${
+                    danger ? 'bg-red-600' : recent ? 'bg-amber-100' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <span
+                      className={`font-medium ${
+                        danger ? 'text-white' : recent ? 'text-amber-900' : 'text-gray-900'
+                      }`}
+                    >
+                      {product.name}
+                    </span>
+                    {recent && (
+                      <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                        <PackagePlus className="h-3 w-3" />
+                        {product.restockAuto ? 'Auto-restocked' : 'Restocked'} +{product.restockQty}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`font-mono text-xs ${sub}`}>{product.code ?? '—'}</span>
+                  </td>
                 <td className="px-4 py-3">
                   <select
                     value={product.categoryId ?? ''}
@@ -130,15 +160,17 @@ export default function ProductManagement() {
                     ))}
                   </select>
                 </td>
-                <td className={`px-4 py-3 ${product.stock <= 0 || product.lowStock ? 'text-white' : 'text-gray-600'}`}>{product.supplierName ?? '-'}</td>
-                <td className={`px-4 py-3 ${product.stock <= 0 || product.lowStock ? 'text-white' : 'text-gray-600'}`}>${product.price.toFixed(2)}</td>
+                <td className={`px-4 py-3 ${danger ? 'text-white' : recent ? 'text-amber-900' : 'text-gray-600'}`}>{product.supplierName ?? '-'}</td>
+                <td className={`px-4 py-3 ${danger ? 'text-white' : recent ? 'text-amber-900' : 'text-gray-600'}`}>${product.price.toFixed(2)}</td>
                 <td className="px-4 py-3">
                   <span className="inline-flex flex-col gap-0.5">
-                    <span className={`text-sm font-bold ${product.stock <= 0 || product.lowStock ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-bold ${danger ? 'text-white' : recent ? 'text-amber-900' : 'text-gray-900'}`}>
                       {product.stock} left
                     </span>
-                    <span className={`text-[11px] ${product.stock <= 0 || product.lowStock ? 'text-red-100' : 'text-gray-500'}`}>
+                    <span className={`text-[11px] ${sub}`}>
                       sold {product.soldCount ?? 0} · min {product.minStock}
+                      {recent &&
+                        ` · +${product.restockQty} ${product.restockAuto ? 'auto-restocked' : 'restocked'} just now`}
                       {product.stock <= 0 ? ' · OUT!' : product.lowStock ? ' · LOW!' : ''}
                     </span>
                   </span>
@@ -180,13 +212,15 @@ export default function ProductManagement() {
                   </button>
                 </td>
               </tr>
-            ))}
+            )
+            })}
           </tbody>
         </table>
         <p className="px-4 py-3 text-xs text-gray-400">
           Auto-restock is on: when a sale drops an item to its minimum, the sold quantity is added
-          back automatically and the admin + supplier get a WhatsApp alert. Use the Restock icon to
-          top up manually.
+          back automatically and the admin + supplier get a WhatsApp alert. Items topped up this way
+          show an amber highlight with the exact quantity for a few minutes. Use the Restock icon to
+          top up manually, or refresh with the button above.
         </p>
       </div>
 

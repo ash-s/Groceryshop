@@ -4,6 +4,13 @@ import { productApi } from '../api/catalog'
 import { getErrorMessage } from '../api/auth'
 import type { Product } from '../types'
 
+const DELIVERY_OPTIONS = [
+  { value: 'SUPPLIER', label: 'Supplier delivered' },
+  { value: 'COURIER', label: 'Courier' },
+  { value: 'SELF_PICKUP', label: 'Self pickup' },
+  { value: 'OTHER', label: 'Other' },
+]
+
 export default function RestockModal({
   product,
   onClose,
@@ -15,6 +22,10 @@ export default function RestockModal({
 }) {
   const suggested = Math.max(1, product.minStock - product.stock, product.soldCount ?? 0)
   const [qty, setQty] = useState(String(suggested))
+  const [deliveryMethod, setDeliveryMethod] = useState('')
+  const [cost, setCost] = useState('')
+  const [receivedDate, setReceivedDate] = useState('')
+  const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const low = product.stock <= 0 || product.lowStock
@@ -29,7 +40,13 @@ export default function RestockModal({
     setLoading(true)
     setError('')
     try {
-      await productApi.restock(product.id, quantity)
+      await productApi.restock(product.id, {
+        quantity,
+        deliveryMethod: deliveryMethod || undefined,
+        costPerUnit: cost.trim() ? Number(cost) : undefined,
+        receivedAt: receivedDate ? `${receivedDate}T00:00:00` : undefined,
+        notes: notes.trim() || undefined,
+      })
       onRestocked()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -80,6 +97,58 @@ export default function RestockModal({
             <p className="mt-1 text-xs text-gray-400">
               Suggested {suggested} — fills to the min level / matches units sold.
             </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                How was it delivered?
+              </label>
+              <select
+                value={deliveryMethod}
+                onChange={(e) => setDeliveryMethod(e.target.value)}
+                className={inputClass}
+              >
+                <option value="">– Select –</option>
+                {DELIVERY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Cost per unit</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="0.00"
+                className={inputClass}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Received on</label>
+              <input
+                type="date"
+                value={receivedDate}
+                onChange={(e) => setReceivedDate(e.target.value)}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-gray-400">Blank = today</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Invoice, batch, remarks…"
+                className={inputClass}
+              />
+            </div>
           </div>
 
           <div className="flex gap-2 pt-2">

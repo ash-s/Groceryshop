@@ -14,6 +14,7 @@ export default function AdminLayout() {
     { to: '/admin/suppliers', label: 'Suppliers' },
     { to: '/admin/stock', label: 'Stock' },
     { to: '/admin/restock', label: 'Restock' },
+    { to: '/admin/restock-history', label: 'Restock History' },
     { to: '/admin/orders', label: 'Orders' },
     { to: '/admin/staff', label: 'Staff' },
   ]

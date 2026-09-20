@@ -5,9 +5,11 @@ import com.groceryshop.category.Category;
 import com.groceryshop.category.CategoryRepository;
 import com.groceryshop.dto.ProductDto;
 import com.groceryshop.dto.ProductRequest;
+import com.groceryshop.dto.RestockRequest;
 import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.order.OrderItemRepository;
+import com.groceryshop.restock.RestockHistoryService;
 import com.groceryshop.supplier.Supplier;
 import com.groceryshop.supplier.SupplierRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,8 @@ public class ProductService {
     private final SupplierRepository supplierRepository;
     private final OrderItemRepository orderItemRepository;
     private final BillItemRepository billItemRepository;
+    private final RestockActivityService restockActivityService;
+    private final RestockHistoryService restockHistoryService;
 
     public List<ProductDto> getAll(Long categoryId, String search) {
         List<Product> products;
@@ -95,13 +99,15 @@ public class ProductService {
     }
 
     /** Adds the given quantity to the product's current stock (manual restock). */
-    public ProductDto restock(Long id, int quantity) {
-        if (quantity <= 0) {
+    public ProductDto restock(Long id, RestockRequest request) {
+        if (request == null || request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new BadRequestException("Restock quantity must be at least 1.");
         }
         Product product = getProduct(id);
-        product.setStock(product.getStock() + quantity);
+        product.setStock(product.getStock() + request.getQuantity());
         Product saved = productRepository.save(product);
+        restockActivityService.recordActivity(saved.getId(), request.getQuantity(), false);
+        restockHistoryService.recordManual(saved, request);
         return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
@@ -135,7 +141,7 @@ public class ProductService {
     }
 
     private ProductDto toDto(Product product, Map<Long, Long> sold) {
-        return ProductDto.builder()
+        ProductDto.ProductDtoBuilder builder = ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
                 .code(product.getCode())
@@ -149,8 +155,15 @@ public class ProductService {
                 .supplierId(product.getSupplier() != null ? product.getSupplier().getId() : null)
                 .supplierName(product.getSupplier() != null ? product.getSupplier().getName() : null)
                 .lowStock(product.isLowStock())
-                .soldCount(sold.getOrDefault(product.getId(), 0L))
-                .build();
+                .soldCount(sold.getOrDefault(product.getId(), 0L));
+
+        RestockActivityService.Activity activity = restockActivityService.recentFor(product.getId());
+        if (activity != null) {
+            builder.restockQty(activity.quantity())
+                    .restockAuto(activity.auto())
+                    .restockAt(activity.at());
+        }
+        return builder.build();
     }
 
     /** Total units sold for one product (POS bills + customer orders, cancelled excluded). */

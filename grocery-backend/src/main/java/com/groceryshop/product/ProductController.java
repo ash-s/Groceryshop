@@ -2,6 +2,7 @@ package com.groceryshop.product;
 
 import com.groceryshop.dto.ProductDto;
 import com.groceryshop.dto.ProductRequest;
+import com.groceryshop.dto.RestockRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -65,8 +66,8 @@ public class ProductController {
 
     @PatchMapping("/{id}/restock")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ProductDto> restock(@PathVariable Long id, @RequestParam Integer quantity) {
-        return ResponseEntity.ok(productService.restock(id, quantity));
+    public ResponseEntity<ProductDto> restock(@PathVariable Long id, @Valid @RequestBody(required = false) RestockRequest request) {
+        return ResponseEntity.ok(productService.restock(id, request));
     }
 
     @DeleteMapping("/{id}")

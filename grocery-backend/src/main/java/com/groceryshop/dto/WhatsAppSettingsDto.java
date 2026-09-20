@@ -10,4 +10,8 @@ import lombok.NoArgsConstructor;
 public class WhatsAppSettingsDto {
 
     private String ownerPhone;
+    private boolean metaEnabled;
+    private String metaToken;
+    private String metaPhoneNumberId;
+    private String metaTemplateName;
 }

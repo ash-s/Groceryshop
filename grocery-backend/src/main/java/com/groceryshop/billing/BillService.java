@@ -9,6 +9,8 @@ import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.product.Product;
 import com.groceryshop.product.ProductRepository;
+import com.groceryshop.product.RestockActivityService;
+import com.groceryshop.restock.RestockHistoryService;
 import com.groceryshop.user.User;
 import com.groceryshop.util.CurrentUserUtil;
 import com.groceryshop.whatsapp.WhatsAppService;
@@ -39,6 +41,8 @@ public class BillService {
     private final ProductRepository productRepository;
     private final CurrentUserUtil currentUserUtil;
     private final WhatsAppService whatsAppService;
+    private final RestockActivityService restockActivityService;
+    private final RestockHistoryService restockHistoryService;
 
     /**
      * Creates a point-of-sale bill for a walk-in customer and reduces product stock
@@ -101,6 +105,16 @@ public class BillService {
         productRepository.saveAll(affectedProducts);
 
         if (!hitLimit.isEmpty()) {
+            LocalDateTime now = LocalDateTime.now();
+            // Remember what was auto-restocked so the admin UI can highlight it,
+            // and persist it to the restock history (type AUTO, no delivery involved).
+            autoRestocked.forEach((productId, qty) -> {
+                Product product = hitLimit.get(productId);
+                if (product != null) {
+                    restockActivityService.recordActivity(productId, qty, true);
+                    restockHistoryService.recordAuto(product, qty, now, staff.getUsername());
+                }
+            });
             whatsAppService.sendLowStockAlerts(new ArrayList<>(hitLimit.values()), autoRestocked);
         }
 

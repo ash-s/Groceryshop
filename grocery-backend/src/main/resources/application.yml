@@ -68,6 +68,11 @@ twilio:
 whatsapp:
   owner-phone: ${OWNER_WHATSAPP:+919876543210}
   enabled: ${WHATSAPP_ENABLED:false}
+  meta-enabled: ${WHATSAPP_META_ENABLED:false}
+  meta-token: ${WHATSAPP_META_TOKEN:}
+  meta-phone-number-id: ${WHATSAPP_META_PHONE_NUMBER_ID:}
+  meta-template-name: ${WHATSAPP_META_TEMPLATE:grocery_shop_restock_alert}
+  meta-api-version: ${WHATSAPP_META_API_VERSION:v21.0}
 
 logging:
   level:

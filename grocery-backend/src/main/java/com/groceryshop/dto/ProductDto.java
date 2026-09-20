@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -25,4 +26,13 @@ public class ProductDto {
 
     /** Total units of this product sold so far (POS bills + orders, cancelled excluded). */
     private Long soldCount;
+
+    /** Quantity from the most recent restock (manual or auto), if it happened recently. */
+    private Integer restockQty;
+
+    /** True when the recent restock was automatic (sale-time top-up), false for manual. */
+    private Boolean restockAuto;
+
+    /** When the recent restock happened. */
+    private LocalDateTime restockAt;
 }

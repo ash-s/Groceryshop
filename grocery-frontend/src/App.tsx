@@ -22,6 +22,7 @@ import Billing from './pages/admin/Billing'
 import Stock from './pages/admin/Stock'
 import CategoryManagement from './pages/admin/CategoryManagement'
 import Restock from './pages/admin/Restock'
+import RestockHistory from './pages/admin/RestockHistory'
 
 export default function App() {
   return (
@@ -114,6 +115,14 @@ export default function App() {
               }
             />
             <Route path="orders" element={<AdminOrders />} />
+            <Route
+              path="restock-history"
+              element={
+                <AdminOnly>
+                  <RestockHistory />
+                </AdminOnly>
+              }
+            />
             <Route
               path="staff"
               element={

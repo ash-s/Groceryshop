@@ -1,6 +1,14 @@
 import api from './client'
 import type { Category, Product, Supplier } from '../types'
 
+export interface RestockPayload {
+  quantity: number
+  deliveryMethod?: string
+  costPerUnit?: number
+  receivedAt?: string
+  notes?: string
+}
+
 export const productApi = {
   getAll: async (params?: { categoryId?: number; search?: string }) => {
     const res = await api.get<Product[]>('/products', { params })
@@ -26,8 +34,8 @@ export const productApi = {
     const res = await api.patch<Product>(`/products/${id}/stock`, null, { params: { stock } })
     return res.data
   },
-  restock: async (id: number, quantity: number) => {
-    const res = await api.patch<Product>(`/products/${id}/restock`, null, { params: { quantity } })
+  restock: async (id: number, payload: RestockPayload) => {
+    const res = await api.patch<Product>(`/products/${id}/restock`, payload)
     return res.data
   },
   delete: async (id: number) => {

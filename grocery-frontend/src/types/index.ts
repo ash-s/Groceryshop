@@ -137,6 +137,27 @@ export interface Product {
   lowStock: boolean
   /** Total units sold so far (POS bills + orders, cancelled excluded). */
   soldCount?: number
+  /** Quantity from the most recent restock (manual or auto), if it happened recently. */
+  restockQty?: number
+  /** True when the recent restock was automatic (sale-time top-up), false for manual. */
+  restockAuto?: boolean
+  /** When the recent restock happened (ISO datetime). */
+  restockAt?: string
+}
+
+export interface RestockHistoryEvent {
+  id: number
+  productId: number
+  productName: string | null
+  productCode: string | null
+  quantity: number
+  eventType: 'AUTO' | 'MANUAL'
+  deliveryMethod: 'SUPPLIER' | 'COURIER' | 'SELF_PICKUP' | 'OTHER' | null
+  receivedAt: string | null
+  costPerUnit: number | null
+  notes: string | null
+  createdBy: string | null
+  createdAt: string
 }
 
 export interface CartItem {

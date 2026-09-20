@@ -1,0 +1,27 @@
+package com.groceryshop.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/** Body of a manual restock: quantity is required, delivery details are optional. */
+@Data
+public class RestockRequest {
+
+    @NotNull(message = "Quantity is required")
+    @Min(value = 1, message = "Quantity must be at least 1")
+    private Integer quantity;
+
+    /** SUPPLIER / COURIER / SELF_PICKUP / OTHER */
+    private String deliveryMethod;
+
+    private BigDecimal costPerUnit;
+
+    /** When the goods were received; defaults to now when omitted. */
+    private LocalDateTime receivedAt;
+
+    private String notes;
+}
