@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Banknote, Leaf, ShoppingBasket, Truck } from 'lucide-react'
 import { useCategories, useProducts } from '../hooks/useCatalog'
 import ProductCard from '../components/ProductCard'
 
@@ -36,7 +37,11 @@ export default function Home() {
               to={`/products?category=${cat.id}`}
               className="bg-white rounded-xl shadow-sm hover:shadow-md transition p-4 text-center"
             >
-              <div className="text-4xl mb-2">{cat.imageUrl ?? '🛒'}</div>
+              {cat.imageUrl ? (
+                <div className="text-4xl mb-2">{cat.imageUrl}</div>
+              ) : (
+                <ShoppingBasket className="h-10 w-10 mx-auto mb-2 text-green-600" />
+              )}
               <span className="text-sm font-medium text-gray-800">{cat.name}</span>
             </Link>
           ))}
@@ -62,17 +67,17 @@ export default function Home() {
       <section className="bg-white border-t">
         <div className="max-w-7xl mx-auto px-4 py-12 sm:px-6 lg:px-8 grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
           <div>
-            <div className="text-4xl mb-2">🚚</div>
+            <Truck className="h-10 w-10 mx-auto mb-2 text-green-600" />
             <h3 className="font-semibold text-gray-900 mb-1">Fast Delivery</h3>
             <p className="text-sm text-gray-500">Delivery within hours</p>
           </div>
           <div>
-            <div className="text-4xl mb-2">🌿</div>
+            <Leaf className="h-10 w-10 mx-auto mb-2 text-green-600" />
             <h3 className="font-semibold text-gray-900 mb-1">Fresh Products</h3>
             <p className="text-sm text-gray-500">Sourced fresh daily</p>
           </div>
           <div>
-            <div className="text-4xl mb-2">💰</div>
+            <Banknote className="h-10 w-10 mx-auto mb-2 text-green-600" />
             <h3 className="font-semibold text-gray-900 mb-1">Best Prices</h3>
             <p className="text-sm text-gray-500">Direct from suppliers</p>
           </div>

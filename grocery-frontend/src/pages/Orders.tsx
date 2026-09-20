@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Package } from 'lucide-react'
 import { useMyOrders } from '../hooks/useOrders'
 import OrderStatusBadge from '../components/OrderStatusBadge'
 import { formatDate } from '../lib/format'
@@ -13,7 +14,7 @@ export default function Orders() {
   if (!orders || orders.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <div className="text-6xl mb-4">📦</div>
+        <Package className="h-20 w-20 mx-auto mb-4 text-gray-300" />
         <h1 className="text-2xl font-bold text-gray-900 mb-4">No orders yet</h1>
         <p className="text-gray-600 mb-8">Place your first order to see it here.</p>
         <Link

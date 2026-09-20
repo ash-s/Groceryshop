@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { AlertTriangle, Salad } from 'lucide-react'
 import { useProduct } from '../hooks/useCatalog'
 import { useAddToCart } from '../hooks/useCart'
 import { useAuth } from '../context/AuthContext'
@@ -37,7 +38,7 @@ export default function ProductDetail() {
           {product.imageUrl ? (
             <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover rounded-2xl" />
           ) : (
-            <span className="text-8xl">🥦</span>
+            <Salad className="h-32 w-32 text-green-600" />
           )}
         </div>
 
@@ -52,14 +53,19 @@ export default function ProductDetail() {
           )}
 
           <div className="mb-4">
-            {product.stock > 0 ? (
-              <span className={product.lowStock ? 'text-red-500 font-medium' : 'text-gray-600'}>
-                {product.lowStock
-                  ? `⚠️ Only ${product.stock} left in stock`
-                  : `${product.stock} available in stock`}
-              </span>
+            {product.stock <= 0 || product.lowStock ? (
+              <div className="rounded-lg bg-red-600 border border-red-700 px-4 py-3">
+                <span className="text-white font-semibold">
+                  <AlertTriangle className="inline h-4 w-4 mr-1 -mt-0.5" />
+                  {product.stock <= 0
+                    ? 'Out of stock'
+                    : `Only ${product.stock} left in stock — LOW!`}
+                </span>
+              </div>
             ) : (
-              <span className="text-red-500 font-medium">Out of stock</span>
+              <p className="text-gray-600">
+                {product.stock} available in stock · Sold {product.soldCount ?? 0}
+              </p>
             )}
           </div>
 

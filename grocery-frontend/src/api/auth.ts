@@ -1,8 +1,11 @@
 import api from './client'
 import type {
   AuthResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordResponse,
   LoginRequest,
   RegisterRequest,
+  ResetPasswordRequest,
 } from '../types'
 
 export interface ApiError {
@@ -17,6 +20,14 @@ export const authApi = {
   },
   register: async (data: RegisterRequest) => {
     const res = await api.post<AuthResponse>('/auth/register', data)
+    return res.data
+  },
+  forgotPassword: async (data: ForgotPasswordRequest) => {
+    const res = await api.post<ForgotPasswordResponse>('/auth/forgot-password', data)
+    return res.data
+  },
+  resetPassword: async (data: ResetPasswordRequest) => {
+    const res = await api.post('/auth/reset-password', data)
     return res.data
   },
 }

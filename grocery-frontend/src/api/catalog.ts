@@ -26,6 +26,10 @@ export const productApi = {
     const res = await api.patch<Product>(`/products/${id}/stock`, null, { params: { stock } })
     return res.data
   },
+  restock: async (id: number, quantity: number) => {
+    const res = await api.patch<Product>(`/products/${id}/restock`, null, { params: { quantity } })
+    return res.data
+  },
   delete: async (id: number) => {
     await api.delete(`/products/${id}`)
   },

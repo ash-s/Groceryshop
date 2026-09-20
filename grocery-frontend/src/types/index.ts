@@ -4,7 +4,7 @@ export interface User {
   email: string
   fullName: string
   phone: string | null
-  role: 'CUSTOMER' | 'ADMIN'
+  role: 'STAFF' | 'ADMIN'
   createdAt: string
 }
 
@@ -27,11 +27,89 @@ export interface RegisterRequest {
   phone?: string
 }
 
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ForgotPasswordResponse {
+  message: string
+  /** Present only when mail is simulated (dev mode) — the link to open to set a new password. */
+  resetLink?: string
+}
+
+export interface ResetPasswordRequest {
+  token: string
+  password: string
+}
+
+export interface CreateUserRequest {
+  username: string
+  email: string
+  password: string
+  fullName: string
+  phone?: string
+  role: 'STAFF' | 'ADMIN'
+}
+
+export interface AdminResetPasswordRequest {
+  newPassword?: string
+}
+
+export interface AdminResetPasswordResponse {
+  message: string
+  temporaryPassword?: string
+}
+
+export interface BillItem {
+  productId: number
+  productName: string
+  quantity: number
+  price: number
+  subtotal: number
+}
+
+export interface Bill {
+  id: number
+  billNumber: string
+  staffName: string
+  customerName: string | null
+  total: number
+  paymentMethod: string | null
+  createdAt: string
+  items: BillItem[]
+}
+
+export interface CreateBillRequest {
+  customerName?: string
+  paymentMethod?: string
+  items: { productId: number; quantity: number }[]
+}
+
+export interface DailySales {
+  date: string
+  label: string
+  total: number
+  billCount: number
+}
+
+export interface SalesReport {
+  daily: DailySales[]
+  totalSales: number
+  billCount: number
+  itemsSold: number
+}
+
 export interface Category {
   id: number
   name: string
   description: string | null
   imageUrl: string | null
+  /** Number of products mapped to this category. */
+  productCount?: number
+}
+
+export interface UploadResponse {
+  url: string
 }
 
 export interface Supplier {
@@ -46,6 +124,7 @@ export interface Supplier {
 export interface Product {
   id: number
   name: string
+  code: string | null
   description: string | null
   price: number
   stock: number
@@ -56,6 +135,8 @@ export interface Product {
   supplierId: number | null
   supplierName: string | null
   lowStock: boolean
+  /** Total units sold so far (POS bills + orders, cancelled excluded). */
+  soldCount?: number
 }
 
 export interface CartItem {

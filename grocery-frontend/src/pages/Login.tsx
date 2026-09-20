@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authApi, getErrorMessage } from '../api/auth'
+import PasswordInput from '../components/PasswordInput'
 import type { User } from '../types'
 
 export default function Login() {
@@ -12,7 +13,8 @@ export default function Login() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/'
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname
+  const expired = new URLSearchParams(location.search).get('expired') === '1'
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -21,7 +23,9 @@ export default function Login() {
     try {
       const res = await authApi.login(form)
       login(res.token, res.user as User)
-      navigate(from, { replace: true })
+      navigate(from ?? (res.user.role === 'ADMIN' ? '/admin' : '/admin/billing'), {
+        replace: true,
+      })
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -33,6 +37,12 @@ export default function Login() {
     <div className="max-w-md mx-auto px-4 py-16">
       <div className="bg-white rounded-2xl shadow-sm p-8">
         <h1 className="text-2xl font-bold text-center text-gray-900 mb-6">Welcome Back</h1>
+
+        {expired && (
+          <div className="mb-4 px-4 py-3 rounded-md bg-amber-50 text-amber-700 text-sm">
+            Your session expired — please log in again.
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 px-4 py-3 rounded-md bg-red-50 text-red-700 text-sm">{error}</div>
@@ -53,13 +63,19 @@ export default function Login() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             />
+            <div className="flex justify-end mt-1">
+              <Link
+                to="/forgot-password"
+                className="text-sm text-green-600 hover:text-green-700 font-medium"
+              >
+                Forgot password?
+              </Link>
+            </div>
           </div>
           <button
             type="submit"

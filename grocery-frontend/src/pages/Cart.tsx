@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Salad, ShoppingCart, Trash2 } from 'lucide-react'
 import { useCart, useUpdateCartQuantity, useRemoveFromCart } from '../hooks/useCart'
 
 export default function Cart() {
@@ -13,7 +14,7 @@ export default function Cart() {
   if (!cart || cart.items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-        <div className="text-6xl mb-4">🛒</div>
+        <ShoppingCart className="h-20 w-20 mx-auto mb-4 text-gray-300" />
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Your cart is empty</h1>
         <p className="text-gray-600 mb-8">Add some fresh groceries to get started.</p>
         <Link
@@ -38,7 +39,7 @@ export default function Cart() {
           {cart.items.map((item) => (
             <div key={item.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center gap-4">
               <div className="w-16 h-16 bg-green-50 rounded-lg flex items-center justify-center text-3xl shrink-0">
-                {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover rounded-lg" /> : '🥦'}
+                {item.imageUrl ? <img src={item.imageUrl} alt={item.productName} className="w-full h-full object-cover rounded-lg" /> : <Salad className="h-8 w-8 text-green-600" />}
               </div>
 
               <div className="flex-1">
@@ -70,10 +71,10 @@ export default function Cart() {
 
               <button
                 onClick={() => removeFromCart.mutate(item.id)}
-                className="text-gray-400 hover:text-red-600 text-xl px-2"
+                className="text-gray-400 hover:text-red-600 px-2"
                 title="Remove"
               >
-                🗑️
+                <Trash2 className="h-5 w-5" />
               </button>
             </div>
           ))}

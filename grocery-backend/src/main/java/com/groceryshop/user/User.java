@@ -40,7 +40,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private Role role = Role.CUSTOMER;
+    private Role role = Role.STAFF;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

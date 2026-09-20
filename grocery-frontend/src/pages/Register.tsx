@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { authApi, getErrorMessage } from '../api/auth'
+import PasswordInput from '../components/PasswordInput'
 import type { User } from '../types'
 
 export default function Register() {
@@ -37,7 +38,7 @@ export default function Register() {
         phone: form.phone || undefined,
       })
       login(res.token, res.user as User)
-      navigate('/', { replace: true })
+      navigate('/admin/billing', { replace: true })
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -99,22 +100,18 @@ export default function Register() {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className={inputClass}
             />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password</label>
-            <input
-              type="password"
+            <PasswordInput
               required
               value={form.confirmPassword}
               onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-              className={inputClass}
             />
           </div>
           <button

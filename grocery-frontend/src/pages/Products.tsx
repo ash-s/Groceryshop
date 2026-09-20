@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { SearchX } from 'lucide-react'
 import { useCategories, useProducts } from '../hooks/useCatalog'
 import ProductCard from '../components/ProductCard'
 
@@ -107,7 +108,7 @@ export default function Products() {
             </div>
           ) : displayed.length === 0 ? (
             <div className="text-center py-16 text-gray-500">
-              <div className="text-5xl mb-4">🔍</div>
+              <SearchX className="h-12 w-12 mx-auto mb-4 text-gray-300" />
               <p>No products found. Try adjusting your filters.</p>
             </div>
           ) : (

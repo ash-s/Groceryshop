@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2 } from 'lucide-react'
 import { supplierApi } from '../../api/catalog'
 import { useSuppliers } from '../../hooks/useCatalog'
 import { getErrorMessage } from '../../api/auth'
@@ -79,15 +80,16 @@ export default function SupplierManagement() {
                       setEditing(supplier)
                       setShowForm(true)
                     }}
-                    className="text-green-600 hover:text-green-700 mr-3"
+                    className="inline-flex items-center gap-1 text-green-600 hover:text-green-700 mr-3"
                   >
-                    ✏️ Edit
+                    <Pencil className="h-4 w-4" />
+                    Edit
                   </button>
                   <button
                     onClick={() => handleDelete(supplier.id)}
                     className="text-red-500 hover:text-red-600"
                   >
-                    🗑️
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </td>
               </tr>

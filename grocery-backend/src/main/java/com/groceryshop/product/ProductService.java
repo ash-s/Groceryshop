@@ -1,17 +1,22 @@
 package com.groceryshop.product;
 
+import com.groceryshop.billing.BillItemRepository;
 import com.groceryshop.category.Category;
 import com.groceryshop.category.CategoryRepository;
 import com.groceryshop.dto.ProductDto;
 import com.groceryshop.dto.ProductRequest;
+import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.exception.ResourceNotFoundException;
+import com.groceryshop.order.OrderItemRepository;
 import com.groceryshop.supplier.Supplier;
 import com.groceryshop.supplier.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -20,6 +25,8 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final SupplierRepository supplierRepository;
+    private final OrderItemRepository orderItemRepository;
+    private final BillItemRepository billItemRepository;
 
     public List<ProductDto> getAll(Long categoryId, String search) {
         List<Product> products;
@@ -30,20 +37,24 @@ public class ProductService {
         } else {
             products = productRepository.findAll();
         }
-        return products.stream().map(this::toDto).toList();
+        Map<Long, Long> sold = soldByProduct();
+        return products.stream().map(product -> toDto(product, sold)).toList();
     }
 
     public ProductDto getById(Long id) {
-        return toDto(getProduct(id));
+        Product product = getProduct(id);
+        return toDto(product, Map.of(product.getId(), soldFor(product.getId())));
     }
 
     public List<ProductDto> getLowStock() {
-        return productRepository.findLowStock().stream().map(this::toDto).toList();
+        Map<Long, Long> sold = soldByProduct();
+        return productRepository.findLowStock().stream().map(product -> toDto(product, sold)).toList();
     }
 
     public ProductDto create(ProductRequest request) {
         Product product = Product.builder()
                 .name(request.getName())
+                .code(request.getCode())
                 .description(request.getDescription())
                 .price(request.getPrice())
                 .stock(request.getStock() != null ? request.getStock() : 0)
@@ -53,12 +64,14 @@ public class ProductService {
                 .supplier(resolveSupplier(request.getSupplierId()))
                 .createdAt(LocalDateTime.now())
                 .build();
-        return toDto(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
     public ProductDto update(Long id, ProductRequest request) {
         Product product = getProduct(id);
         product.setName(request.getName());
+        product.setCode(request.getCode());
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         if (request.getStock() != null) {
@@ -70,13 +83,26 @@ public class ProductService {
         product.setImageUrl(request.getImageUrl());
         product.setCategory(resolveCategory(request.getCategoryId()));
         product.setSupplier(resolveSupplier(request.getSupplierId()));
-        return toDto(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
     public ProductDto updateStock(Long id, Integer stock) {
         Product product = getProduct(id);
         product.setStock(stock != null ? stock : 0);
-        return toDto(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
+    }
+
+    /** Adds the given quantity to the product's current stock (manual restock). */
+    public ProductDto restock(Long id, int quantity) {
+        if (quantity <= 0) {
+            throw new BadRequestException("Restock quantity must be at least 1.");
+        }
+        Product product = getProduct(id);
+        product.setStock(product.getStock() + quantity);
+        Product saved = productRepository.save(product);
+        return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
     public void delete(Long id) {
@@ -105,9 +131,14 @@ public class ProductService {
     }
 
     private ProductDto toDto(Product product) {
+        return toDto(product, Map.of(product.getId(), soldFor(product.getId())));
+    }
+
+    private ProductDto toDto(Product product, Map<Long, Long> sold) {
         return ProductDto.builder()
                 .id(product.getId())
                 .name(product.getName())
+                .code(product.getCode())
                 .description(product.getDescription())
                 .price(product.getPrice())
                 .stock(product.getStock())
@@ -118,6 +149,25 @@ public class ProductService {
                 .supplierId(product.getSupplier() != null ? product.getSupplier().getId() : null)
                 .supplierName(product.getSupplier() != null ? product.getSupplier().getName() : null)
                 .lowStock(product.isLowStock())
+                .soldCount(sold.getOrDefault(product.getId(), 0L))
                 .build();
+    }
+
+    /** Total units sold for one product (POS bills + customer orders, cancelled excluded). */
+    private long soldFor(Long productId) {
+        return orderItemRepository.sumSoldByProductId(productId)
+                + billItemRepository.sumSoldByProductId(productId);
+    }
+
+    /** Combined sold totals per product from both sales sources, for efficient list mapping. */
+    private Map<Long, Long> soldByProduct() {
+        Map<Long, Long> map = new HashMap<>();
+        for (Object[] row : orderItemRepository.sumSoldByProduct()) {
+            map.merge(((Number) row[0]).longValue(), ((Number) row[1]).longValue(), Long::sum);
+        }
+        for (Object[] row : billItemRepository.sumSoldByProduct()) {
+            map.merge(((Number) row[0]).longValue(), ((Number) row[1]).longValue(), Long::sum);
+        }
+        return map;
     }
 }

@@ -20,6 +20,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("SELECT COALESCE(MAX(p.id), 0) FROM Product p")
     Long findMaxId();
 
+    Optional<Product> findByCode(String code);
+
+    long countByCategoryId(Long categoryId);
+
     @Override
     Optional<Product> findById(Long id);
 }

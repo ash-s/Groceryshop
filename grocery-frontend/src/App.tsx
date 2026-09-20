@@ -1,9 +1,11 @@
 import { Routes, Route } from 'react-router-dom'
 import Navbar from './components/Navbar'
-import { ProtectedRoute, AdminRoute } from './components/ProtectedRoute'
+import { ProtectedRoute, AdminRoute, AdminOnly, StaffOnly } from './components/ProtectedRoute'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
 import Cart from './pages/Cart'
@@ -11,10 +13,15 @@ import Checkout from './pages/Checkout'
 import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
 import AdminLayout from './pages/admin/AdminLayout'
-import Dashboard from './pages/admin/Dashboard'
+import AdminIndex from './pages/admin/AdminIndex'
 import ProductManagement from './pages/admin/ProductManagement'
 import SupplierManagement from './pages/admin/SupplierManagement'
 import AdminOrders from './pages/admin/AdminOrders'
+import StaffManagement from './pages/admin/StaffManagement'
+import Billing from './pages/admin/Billing'
+import Stock from './pages/admin/Stock'
+import CategoryManagement from './pages/admin/CategoryManagement'
+import Restock from './pages/admin/Restock'
 
 export default function App() {
   return (
@@ -25,6 +32,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/products" element={<Products />} />
           <Route path="/products/:id" element={<ProductDetail />} />
 
@@ -69,10 +78,50 @@ export default function App() {
               </AdminRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<AdminIndex />} />
             <Route path="products" element={<ProductManagement />} />
-            <Route path="suppliers" element={<SupplierManagement />} />
+            <Route
+              path="categories"
+              element={
+                <AdminOnly>
+                  <CategoryManagement />
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="suppliers"
+              element={
+                <AdminOnly>
+                  <SupplierManagement />
+                </AdminOnly>
+              }
+            />
+            <Route
+              path="billing"
+              element={
+                <StaffOnly>
+                  <Billing />
+                </StaffOnly>
+              }
+            />
+            <Route path="stock" element={<Stock />} />
+            <Route
+              path="restock"
+              element={
+                <AdminOnly>
+                  <Restock />
+                </AdminOnly>
+              }
+            />
             <Route path="orders" element={<AdminOrders />} />
+            <Route
+              path="staff"
+              element={
+                <AdminOnly>
+                  <StaffManagement />
+                </AdminOnly>
+              }
+            />
           </Route>
         </Routes>
       </main>

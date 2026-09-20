@@ -63,6 +63,12 @@ public class ProductController {
         return ResponseEntity.ok(productService.updateStock(id, stock));
     }
 
+    @PatchMapping("/{id}/restock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDto> restock(@PathVariable Long id, @RequestParam Integer quantity) {
+        return ResponseEntity.ok(productService.restock(id, quantity));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {

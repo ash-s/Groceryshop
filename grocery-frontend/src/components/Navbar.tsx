@@ -1,9 +1,10 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { ShoppingCart } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { useCart } from '../hooks/useCart'
 
 export default function Navbar() {
-  const { isAuthenticated, isAdmin, user, logout } = useAuth()
+  const { isAuthenticated, user, logout } = useAuth()
   const { data: cart } = useCart()
   const navigate = useNavigate()
 
@@ -22,7 +23,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl">🛒</span>
+            <ShoppingCart className="h-6 w-6 text-green-700" />
             <span className="text-xl font-bold text-green-700">GroceryShop</span>
           </Link>
 
@@ -32,8 +33,13 @@ export default function Navbar() {
             {isAuthenticated && (
               <NavLink to="/orders" className={navLinkClass}>Orders</NavLink>
             )}
-            {isAdmin && (
-              <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>
+            {isAuthenticated && (
+              <NavLink
+                to={user?.role === 'ADMIN' ? '/admin' : '/admin/billing'}
+                className={navLinkClass}
+              >
+                {user?.role === 'ADMIN' ? 'Dashboard' : 'Billing'}
+              </NavLink>
             )}
           </div>
 
@@ -42,7 +48,7 @@ export default function Navbar() {
               to={isAuthenticated ? '/cart' : '/login'}
               className="relative flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-green-700"
             >
-              <span className="text-xl">🛒</span>
+              <ShoppingCart className="h-5 w-5" />
               {cart && cart.totalItems > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                   {cart.totalItems}

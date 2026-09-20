@@ -13,6 +13,9 @@ public class ProductRequest {
     @NotBlank(message = "Product name is required")
     private String name;
 
+    /** Barcode / product code used for fast checkout (optional). */
+    private String code;
+
     private String description;
 
     @NotNull(message = "Price is required")

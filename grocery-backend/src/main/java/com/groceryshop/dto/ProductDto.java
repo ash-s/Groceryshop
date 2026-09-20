@@ -11,6 +11,7 @@ public class ProductDto {
 
     private Long id;
     private String name;
+    private String code;
     private String description;
     private BigDecimal price;
     private Integer stock;
@@ -21,4 +22,7 @@ public class ProductDto {
     private Long supplierId;
     private String supplierName;
     private boolean lowStock;
+
+    /** Total units of this product sold so far (POS bills + orders, cancelled excluded). */
+    private Long soldCount;
 }

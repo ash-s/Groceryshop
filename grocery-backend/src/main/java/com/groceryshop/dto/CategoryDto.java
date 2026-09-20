@@ -11,4 +11,7 @@ public class CategoryDto {
     private String name;
     private String description;
     private String imageUrl;
+
+    /** Number of products mapped to this category. */
+    private Long productCount;
 }
