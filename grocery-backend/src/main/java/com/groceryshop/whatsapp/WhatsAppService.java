@@ -110,6 +110,35 @@ public class WhatsAppService {
     }
 
     /**
+     * Sends the daily "delivery expected" reminder to the shop owner. Uses the same
+     * approved template with the order details; simulated (console only) until Meta
+     * alerts are configured and enabled.
+     */
+    public void sendDeliveryReminder(String productName, String codeValue, int quantity,
+                                     java.time.LocalDate expectedDate, String deliveryMethod,
+                                     String supplierName, int minStock) {
+        String ownerPhone = whatsAppSettingsService.getOwnerPhone();
+        String code = codeValue != null ? codeValue : "-";
+        String expected = expectedDate != null ? expectedDate.toString() : "-";
+        String method = deliveryMethod != null ? deliveryMethod : "Delivery";
+        String due = expectedDate != null && !expectedDate.isBefore(java.time.LocalDate.now())
+                ? "expected today" : "overdue";
+        String note = "Delivery " + due + ". Confirm receipt on the Restock page to add " + quantity + " to stock.";
+        boolean real = isMetaConfigured();
+
+        if (!real) {
+            log.info("[SIMULATED WhatsApp -> owner {}] DELIVERY REMINDER: {} (code {}), {} units, {} {}. "
+                    + "Supplier: {}. {}", ownerPhone, productName, code, quantity, method, due, supplierName, note);
+            return;
+        }
+        List<String> params = templateParams(productName, code, String.valueOf(quantity),
+                expected, "-", supplierName, note);
+        if (sendMetaTemplate(ownerPhone, params)) {
+            log.info("[Meta WhatsApp sent -> owner {}] delivery reminder for {} (code {})", ownerPhone, productName, code);
+        }
+    }
+
+    /**
      * Sends a manual test alert to the saved owner number so the admin can verify
      * the channel works. Uses the Meta template when configured, otherwise logs to
      * the backend console (simulated mode).

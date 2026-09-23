@@ -126,6 +126,7 @@ export interface Product {
   name: string
   code: string | null
   description: string | null
+  brand: string | null
   price: number
   stock: number
   minStock: number
@@ -154,10 +155,20 @@ export interface RestockHistoryEvent {
   eventType: 'AUTO' | 'MANUAL'
   deliveryMethod: 'SUPPLIER' | 'COURIER' | 'SELF_PICKUP' | 'OTHER' | null
   receivedAt: string | null
+  /** Expected delivery date for pending purchases (stock not added yet). */
+  expectedDelivery: string | null
+  /** PENDING (delivery not received, stock NOT added) or DELIVERED (stock added). */
+  status: 'PENDING' | 'DELIVERED'
+  /** When the admin confirmed the delivery and stock was added. */
+  deliveredAt: string | null
   costPerUnit: number | null
   notes: string | null
   createdBy: string | null
   createdAt: string
+}
+
+export interface StockSettings {
+  autoRestockEnabled: boolean
 }
 
 export interface CartItem {

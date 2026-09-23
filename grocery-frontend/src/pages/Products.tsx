@@ -15,10 +15,15 @@ export default function Products() {
   const { data: products, isLoading } = useProducts({ categoryId, search: search || undefined })
 
   let displayed = products ?? []
+  // Out-of-stock products sink to the bottom of the list.
+  const statusRank = (p: { stock: number; lowStock: boolean }) =>
+    p.stock <= 0 ? 2 : p.lowStock ? 1 : 0
   if (sort === 'price-asc') {
-    displayed = [...displayed].sort((a, b) => a.price - b.price)
+    displayed = [...displayed].sort((a, b) => statusRank(a) - statusRank(b) || a.price - b.price)
   } else if (sort === 'price-desc') {
-    displayed = [...displayed].sort((a, b) => b.price - a.price)
+    displayed = [...displayed].sort((a, b) => statusRank(a) - statusRank(b) || b.price - a.price)
+  } else {
+    displayed = [...displayed].sort((a, b) => statusRank(a) - statusRank(b))
   }
 
   const handleSearch = (e: React.FormEvent) => {

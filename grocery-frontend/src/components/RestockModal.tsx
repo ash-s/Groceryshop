@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { X } from 'lucide-react'
+import { CalendarClock, CheckCircle2, X } from 'lucide-react'
 import { productApi } from '../api/catalog'
 import { getErrorMessage } from '../api/auth'
 import type { Product } from '../types'
@@ -25,10 +25,14 @@ export default function RestockModal({
   const [deliveryMethod, setDeliveryMethod] = useState('')
   const [cost, setCost] = useState('')
   const [receivedDate, setReceivedDate] = useState('')
+  const [expectedDelivery, setExpectedDelivery] = useState('')
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState<string | null>(null)
   const low = product.stock <= 0 || product.lowStock
+
+  const pending = expectedDelivery.length > 0
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -44,9 +48,16 @@ export default function RestockModal({
         quantity,
         deliveryMethod: deliveryMethod || undefined,
         costPerUnit: cost.trim() ? Number(cost) : undefined,
-        receivedAt: receivedDate ? `${receivedDate}T00:00:00` : undefined,
+        expectedDelivery: pending ? expectedDelivery : undefined,
+        receivedAt:
+          pending || !receivedDate ? undefined : `${receivedDate}T00:00:00`,
         notes: notes.trim() || undefined,
       })
+      setDone(
+        pending
+          ? `Delivery scheduled for ${new Date(`${expectedDelivery}T00:00:00`).toLocaleDateString()}. Stock is NOT added yet - the pending delivery will show on the Restock page and in the in-app banner. When the goods arrive, click Mark Delivered and the stock is added automatically.`
+          : 'Stock added. The restock is recorded in Restock History.'
+      )
       onRestocked()
     } catch (err) {
       setError(getErrorMessage(err))
@@ -57,6 +68,29 @@ export default function RestockModal({
 
   const inputClass =
     'w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500'
+
+  if (done) {
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+            <CheckCircle2 className="h-6 w-6 text-green-600" />
+          </div>
+          <h3 className="mb-2 text-center text-lg font-bold text-gray-900">
+            {pending ? 'Delivery Scheduled' : 'Restock Complete'}
+          </h3>
+          <p className="mb-5 text-sm text-gray-600">{done}</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -129,17 +163,38 @@ export default function RestockModal({
             </div>
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Expected delivery date <span className="font-normal text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="date"
+              value={expectedDelivery}
+              min={new Date().toISOString().slice(0, 10)}
+              onChange={(e) => setExpectedDelivery(e.target.value)}
+              className={inputClass}
+            />
+            <p className="mt-1 flex items-start gap-1 text-xs text-gray-400">
+              <CalendarClock className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              Leave blank to add stock now. When set, stock is <strong>not</strong> added yet — the
+              delivery stays pending, you get alerts on that date (WhatsApp + in-app), and stock is
+              added the moment you click Mark Delivered after the goods arrive.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Received on</label>
-              <input
-                type="date"
-                value={receivedDate}
-                onChange={(e) => setReceivedDate(e.target.value)}
-                className={inputClass}
-              />
-              <p className="mt-1 text-xs text-gray-400">Blank = today</p>
-            </div>
+            {!pending && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Received on</label>
+                <input
+                  type="date"
+                  value={receivedDate}
+                  onChange={(e) => setReceivedDate(e.target.value)}
+                  className={inputClass}
+                />
+                <p className="mt-1 text-xs text-gray-400">Blank = today</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
               <input
@@ -164,7 +219,7 @@ export default function RestockModal({
               disabled={loading}
               className="flex-1 px-4 py-2 rounded-md text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
             >
-              {loading ? 'Restocking…' : 'Restock Now'}
+              {loading ? 'Saving…' : pending ? 'Schedule Delivery' : 'Add to Stock'}
             </button>
           </div>
         </form>

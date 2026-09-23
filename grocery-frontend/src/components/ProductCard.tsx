@@ -7,7 +7,8 @@ import { useAuth } from '../context/AuthContext'
 export default function ProductCard({ product }: { product: Product }) {
   const addToCart = useAddToCart()
   const { isAuthenticated } = useAuth()
-  const danger = product.stock <= 0 || product.lowStock
+  const out = product.stock <= 0
+  const low = !out && product.lowStock
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault()
@@ -19,7 +20,11 @@ export default function ProductCard({ product }: { product: Product }) {
     <Link
       to={`/products/${product.id}`}
       className={`rounded-xl p-4 flex flex-col transition ${
-        danger ? 'bg-red-600 border border-red-700' : 'bg-white shadow-sm hover:shadow-md'
+        out
+          ? 'bg-gray-200 border border-gray-300 opacity-60 grayscale'
+          : low
+            ? 'bg-red-600 border border-red-700'
+            : 'bg-white shadow-sm hover:shadow-md'
       }`}
     >
       <div className="h-32 bg-green-50 rounded-lg flex items-center justify-center mb-3 text-5xl">
@@ -31,10 +36,12 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
 
       <div className="flex-1">
-        <h3 className={`font-medium mb-1 ${danger ? 'text-white' : 'text-gray-900'}`}>{product.name}</h3>
+        <h3 className={`font-medium mb-1 ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
+          {product.name}
+        </h3>
         <p className="text-sm mb-2">
           {product.stock > 0 ? (
-            <span className={danger ? 'text-white' : 'text-gray-500'}>
+            <span className={low ? 'text-white' : 'text-gray-500'}>
               {product.lowStock ? (
                 <>
                   <AlertTriangle className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
@@ -46,13 +53,15 @@ export default function ProductCard({ product }: { product: Product }) {
               {' · '}Sold: {product.soldCount ?? 0}
             </span>
           ) : (
-            <span className="text-white font-medium">Out of stock</span>
+            <span className="text-gray-500 font-medium">Out of stock</span>
           )}
         </p>
       </div>
 
       <div className="flex items-center justify-between mt-2">
-        <span className={`text-lg font-bold ${danger ? 'text-white' : 'text-green-700'}`}>${product.price.toFixed(2)}</span>
+        <span className={`text-lg font-bold ${out ? 'text-gray-500' : low ? 'text-white' : 'text-green-700'}`}>
+          ${product.price.toFixed(2)}
+        </span>
         <button
           onClick={handleAdd}
           disabled={product.stock <= 0 || addToCart.isPending}

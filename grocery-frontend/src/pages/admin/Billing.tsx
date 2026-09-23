@@ -34,6 +34,7 @@ export default function Billing() {
   const term = search.trim().toLowerCase()
 
   // Suggestions for the type-to-add box — exact code match first, then name matches.
+  // Fully out of stock items are not offered.
   const suggestions = useMemo(() => {
     if (!products || !term) return []
     const exactCode = products.filter(
@@ -47,21 +48,26 @@ export default function Billing() {
     const ordered = [...exactCode, ...byName, ...byCode]
     return ordered
       .filter((p) => (seen.has(p.id) ? false : (seen.add(p.id), true)))
+      .filter((p) => p.stock > 0) // don't offer out-of-stock items
       .slice(0, 6)
   }, [products, term])
 
   // Tile grid — filtered by search term (name OR code) and category.
+  // Out of stock items sink to the bottom and can't be picked.
   const filteredProducts = useMemo(() => {
     if (!products) return []
-    return products.filter((p) => {
-      if (categoryId !== null && p.categoryId !== categoryId) return false
-      if (term) {
-        const byName = p.name.toLowerCase().includes(term)
-        const byCode = p.code && p.code.toLowerCase().includes(term)
-        if (!byName && !byCode) return false
-      }
-      return true
-    })
+    const rank = (p: Product) => (p.stock <= 0 ? 2 : p.lowStock ? 1 : 0)
+    return products
+      .filter((p) => {
+        if (categoryId !== null && p.categoryId !== categoryId) return false
+        if (term) {
+          const byName = p.name.toLowerCase().includes(term)
+          const byCode = p.code && p.code.toLowerCase().includes(term)
+          if (!byName && !byCode) return false
+        }
+        return true
+      })
+      .sort((a, b) => rank(a) - rank(b))
   }, [products, term, categoryId])
 
   const itemCount = lines.reduce((n, l) => n + l.quantity, 0)
@@ -232,28 +238,28 @@ export default function Billing() {
                   title={out ? 'Out of stock' : `Add ${product.name}`}
                   className={`rounded-lg border p-2 text-left transition ${
                     out
-                      ? 'cursor-not-allowed border-red-700 bg-red-600 opacity-70'
+                      ? 'cursor-not-allowed border-gray-300 bg-gray-100 opacity-60 grayscale'
                       : low
                         ? 'border-red-700 bg-red-600 hover:bg-red-500 hover:shadow active:scale-[0.98]'
                         : 'border-gray-200 bg-white hover:border-green-500 hover:shadow active:scale-[0.98]'
                   }`}
                 >
                   <div className="flex items-baseline justify-between gap-1">
-                    <span className={`truncate text-xs font-semibold ${out || low ? 'text-white' : 'text-gray-900'}`}>
+                    <span className={`truncate text-xs font-semibold ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
                       {product.name}
                     </span>
                     {product.code && (
-                      <span className={`shrink-0 font-mono text-[9px] ${out || low ? 'text-red-100' : 'text-gray-400'}`}>
+                      <span className={`shrink-0 font-mono text-[9px] ${out ? 'text-gray-400' : low ? 'text-red-100' : 'text-gray-400'}`}>
                         {product.code}
                       </span>
                     )}
                   </div>
-                  <div className={`mt-0.5 text-sm font-bold ${out || low ? 'text-white' : 'text-green-700'}`}>
+                  <div className={`mt-0.5 text-sm font-bold ${out ? 'text-gray-500' : low ? 'text-white' : 'text-green-700'}`}>
                     ${product.price.toFixed(2)}
                   </div>
                   <div className="mt-0.5">
                     {product.stock <= 0 ? (
-                      <span className="text-[10px] font-medium text-red-100">Out of stock</span>
+                      <span className="text-[10px] font-medium text-gray-500">Out of stock</span>
                     ) : product.lowStock ? (
                       <span className="text-[10px] font-bold text-white">
                         Left {product.stock} · Sold {product.soldCount ?? 0} · LOW!

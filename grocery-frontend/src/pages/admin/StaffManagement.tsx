@@ -225,6 +225,7 @@ function AddStaffForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             <label className="block text-sm font-medium text-gray-700 mb-1">Full name *</label>
             <input
               required
+              maxLength={100}
               value={form.fullName}
               onChange={(e) => setForm({ ...form, fullName: e.target.value })}
               className={inputClass}
@@ -235,6 +236,7 @@ function AddStaffForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             <input
               required
               minLength={3}
+              maxLength={50}
               value={form.username}
               onChange={(e) => setForm({ ...form, username: e.target.value })}
               className={inputClass}
@@ -245,6 +247,7 @@ function AddStaffForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
             <input
               required
               type="email"
+              maxLength={100}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className={inputClass}
@@ -253,6 +256,7 @@ function AddStaffForm({ onClose, onSaved }: { onClose: () => void; onSaved: () =
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
+              maxLength={20}
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               className={inputClass}

@@ -18,6 +18,9 @@ public class ProductRequest {
 
     private String description;
 
+    /** Brand/make of the product, e.g. Amul, Britannia (optional). */
+    private String brand;
+
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.01", message = "Price must be greater than zero")
     private BigDecimal price;

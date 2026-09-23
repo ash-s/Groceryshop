@@ -8,6 +8,10 @@ export interface WhatsAppSettings {
   metaTemplateName: string
 }
 
+export interface StockSettings {
+  autoRestockEnabled: boolean
+}
+
 export interface WhatsAppTestResult {
   enabled: boolean
   ownerPhone: string
@@ -26,6 +30,14 @@ export const settingsApi = {
   },
   sendTest: async () => {
     const res = await api.post<WhatsAppTestResult>('/settings/whatsapp/test')
+    return res.data
+  },
+  getStock: async () => {
+    const res = await api.get<StockSettings>('/settings/stock')
+    return res.data
+  },
+  updateStock: async (settings: StockSettings) => {
+    const res = await api.put<StockSettings>('/settings/stock', settings)
     return res.data
   },
 }

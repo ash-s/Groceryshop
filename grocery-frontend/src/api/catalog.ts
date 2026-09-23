@@ -6,6 +6,7 @@ export interface RestockPayload {
   deliveryMethod?: string
   costPerUnit?: number
   receivedAt?: string
+  expectedDelivery?: string
   notes?: string
 }
 

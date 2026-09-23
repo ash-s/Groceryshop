@@ -3,6 +3,9 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useProducts } from '../../hooks/useCatalog'
 import { productApi } from '../../api/catalog'
 import { getErrorMessage } from '../../api/auth'
+import type { Product } from '../../types'
+
+const rank = (p: Product) => (p.stock <= 0 ? 2 : p.lowStock ? 1 : 0)
 
 interface AdjustTarget {
   id: number
@@ -20,9 +23,9 @@ export default function Stock() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const filtered = products?.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = products
+    ?.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => rank(a) - rank(b))
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['products'] })
 
@@ -79,23 +82,41 @@ export default function Stock() {
           </thead>
           <tbody>
             {filtered?.map((product) => {
-              const status =
-                product.stock <= 0
-                  ? { label: 'Out of Stock', cls: 'bg-red-100 text-red-700' }
-                  : product.lowStock
-                    ? { label: 'Low Stock', cls: 'bg-amber-100 text-amber-700' }
-                    : { label: 'In Stock', cls: 'bg-green-100 text-green-700' }
+              const out = product.stock <= 0
+              const low = !out && product.lowStock
+              const status = out
+                ? { label: 'Out of Stock', cls: 'bg-red-100 text-red-700' }
+                : low
+                  ? { label: 'Low Stock', cls: 'bg-amber-100 text-amber-700' }
+                  : { label: 'In Stock', cls: 'bg-green-100 text-green-700' }
               return (
-                <tr key={product.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900">{product.name}</td>
-                  <td className="px-4 py-3 text-gray-600">{product.categoryName ?? '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">${product.price.toFixed(2)}</td>
+                <tr
+                  key={product.id}
+                  className={`border-b last:border-0 ${
+                    out
+                      ? 'bg-gray-200 opacity-60 grayscale'
+                      : low
+                        ? 'bg-red-600'
+                        : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <td className={`px-4 py-3 font-medium ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
+                    {product.name}
+                  </td>
+                  <td className={`px-4 py-3 ${out ? 'text-gray-400' : low ? 'text-red-100' : 'text-gray-600'}`}>
+                    {product.categoryName ?? '-'}
+                  </td>
+                  <td className={`px-4 py-3 ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-600'}`}>
+                    ${product.price.toFixed(2)}
+                  </td>
                   <td className="px-4 py-3">
-                    <span className={`font-semibold ${product.stock <= 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                    <span className={`font-semibold ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
                       {product.stock}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{product.minStock}</td>
+                  <td className={`px-4 py-3 ${out ? 'text-gray-500' : low ? 'text-red-100' : 'text-gray-500'}`}>
+                    {product.minStock}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold ${status.cls}`}>
                       {status.label}
@@ -108,7 +129,13 @@ export default function Stock() {
                         setQty('')
                         setError('')
                       }}
-                      className="text-green-600 hover:text-green-700 mr-3"
+                      className={`${
+                        out
+                          ? 'text-gray-500 hover:text-gray-700'
+                          : low
+                            ? 'text-white hover:text-red-100'
+                            : 'text-green-600 hover:text-green-700'
+                      } mr-3`}
                       title="Add stock (stock in)"
                     >
                       + Add Stock
@@ -119,7 +146,13 @@ export default function Stock() {
                         setQty('')
                         setError('')
                       }}
-                      className="text-red-500 hover:text-red-600"
+                      className={
+                        out
+                          ? 'text-gray-500 hover:text-gray-700'
+                          : low
+                            ? 'text-white hover:text-red-100'
+                            : 'text-red-500 hover:text-red-600'
+                      }
                       title="Remove stock (stock out)"
                     >
                       − Stock Out

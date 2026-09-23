@@ -16,11 +16,14 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * One restock event: an automatic sale-time top-up (AUTO) or a manual restock /
  * received delivery (MANUAL). Persisted so the admin can review the full history.
+ * Events ordered with a future expected delivery are PENDING — the goods have not
+ * been received yet, so stock is NOT increased until the admin confirms delivery.
  */
 @Entity
 @Table(name = "restock_events")
@@ -52,6 +55,23 @@ public class RestockEvent {
     /** When the goods were received (manual) or when the sale triggered it (auto). */
     @Column(name = "received_at")
     private LocalDateTime receivedAt;
+
+    /** For pending purchases: the date the delivery is expected to arrive. */
+    @Column(name = "expected_delivery")
+    private LocalDate expectedDelivery;
+
+    /** PENDING (ordered, not yet received) or DELIVERED (stock already added). */
+    @Column(nullable = false, length = 20)
+    @Builder.Default
+    private String status = "DELIVERED";
+
+    /** When the admin confirmed the delivery and stock was added. */
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    /** Date the last delivery-reminder was sent (daily reminder, once per day per event). */
+    @Column(name = "alert_sent_on")
+    private LocalDate alertSentOn;
 
     @Column(name = "cost_per_unit", precision = 10, scale = 2)
     private BigDecimal costPerUnit;

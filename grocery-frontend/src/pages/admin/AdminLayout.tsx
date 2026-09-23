@@ -1,5 +1,6 @@
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import PendingDeliveryBanner from '../../components/PendingDeliveryBanner'
 
 export default function AdminLayout() {
   const location = useLocation()
@@ -53,6 +54,8 @@ export default function AdminLayout() {
           })}
         </div>
       )}
+
+      <PendingDeliveryBanner />
 
       <Outlet />
     </div>

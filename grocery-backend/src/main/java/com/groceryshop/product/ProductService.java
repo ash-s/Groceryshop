@@ -12,6 +12,7 @@ import com.groceryshop.order.OrderItemRepository;
 import com.groceryshop.restock.RestockHistoryService;
 import com.groceryshop.supplier.Supplier;
 import com.groceryshop.supplier.SupplierRepository;
+import com.groceryshop.whatsapp.WhatsAppService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,7 @@ public class ProductService {
     private final BillItemRepository billItemRepository;
     private final RestockActivityService restockActivityService;
     private final RestockHistoryService restockHistoryService;
+    private final WhatsAppService whatsAppService;
 
     public List<ProductDto> getAll(Long categoryId, String search) {
         List<Product> products;
@@ -60,6 +62,7 @@ public class ProductService {
                 .name(request.getName())
                 .code(request.getCode())
                 .description(request.getDescription())
+                .brand(request.getBrand())
                 .price(request.getPrice())
                 .stock(request.getStock() != null ? request.getStock() : 0)
                 .minStock(request.getMinStock() != null ? request.getMinStock() : 10)
@@ -69,14 +72,17 @@ public class ProductService {
                 .createdAt(LocalDateTime.now())
                 .build();
         Product saved = productRepository.save(product);
+        notifyIfLow(saved);
         return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
     public ProductDto update(Long id, ProductRequest request) {
         Product product = getProduct(id);
+        boolean wasLow = product.isLowStock();
         product.setName(request.getName());
         product.setCode(request.getCode());
         product.setDescription(request.getDescription());
+        product.setBrand(request.getBrand());
         product.setPrice(request.getPrice());
         if (request.getStock() != null) {
             product.setStock(request.getStock());
@@ -88,22 +94,46 @@ public class ProductService {
         product.setCategory(resolveCategory(request.getCategoryId()));
         product.setSupplier(resolveSupplier(request.getSupplierId()));
         Product saved = productRepository.save(product);
+        notifyIfLow(saved, wasLow);
         return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
     public ProductDto updateStock(Long id, Integer stock) {
         Product product = getProduct(id);
+        boolean wasLow = product.isLowStock();
         product.setStock(stock != null ? stock : 0);
         Product saved = productRepository.save(product);
+        notifyIfLow(saved, wasLow);
         return toDto(saved, Map.of(saved.getId(), soldFor(saved.getId())));
     }
 
-    /** Adds the given quantity to the product's current stock (manual restock). */
+    /** Sends owner + supplier low-stock alerts when a brand-new product starts at/below its minimum. */
+    private void notifyIfLow(Product product) {
+        if (product.isLowStock()) {
+            whatsAppService.sendLowStockAlerts(List.of(product));
+        }
+    }
+
+    /** Sends owner + supplier low-stock alerts only when stock actually dropped to/below the minimum. */
+    private void notifyIfLow(Product product, boolean wasLow) {
+        if (!wasLow && product.isLowStock()) {
+            whatsAppService.sendLowStockAlerts(List.of(product));
+        }
+    }
+
+    /** Adds the given quantity to the product's current stock (manual restock).
+     *  When an expected delivery date is provided the goods are NOT yet in stock:
+     *  a pending delivery is recorded and stock is added only when the admin
+     *  confirms the delivery as received. */
     public ProductDto restock(Long id, RestockRequest request) {
         if (request == null || request.getQuantity() == null || request.getQuantity() <= 0) {
             throw new BadRequestException("Restock quantity must be at least 1.");
         }
         Product product = getProduct(id);
+        if (request.getExpectedDelivery() != null) {
+            restockHistoryService.createPending(product, request);
+            return toDto(product, Map.of(product.getId(), soldFor(product.getId())));
+        }
         product.setStock(product.getStock() + request.getQuantity());
         Product saved = productRepository.save(product);
         restockActivityService.recordActivity(saved.getId(), request.getQuantity(), false);
@@ -146,6 +176,7 @@ public class ProductService {
                 .name(product.getName())
                 .code(product.getCode())
                 .description(product.getDescription())
+                .brand(product.getBrand())
                 .price(product.getPrice())
                 .stock(product.getStock())
                 .minStock(product.getMinStock())

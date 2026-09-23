@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -23,6 +24,16 @@ public class RestockEventDto {
     private String deliveryMethod;
 
     private LocalDateTime receivedAt;
+
+    /** For pending purchases: the expected delivery date (stock NOT added yet). */
+    private LocalDate expectedDelivery;
+
+    /** PENDING (delivery awaited, stock not added) or DELIVERED (stock added). */
+    private String status;
+
+    /** When the admin confirmed the delivery and stock was added. */
+    private LocalDateTime deliveredAt;
+
     private BigDecimal costPerUnit;
     private String notes;
     private String createdBy;

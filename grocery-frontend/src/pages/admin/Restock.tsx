@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle,
+  CalendarClock,
   Check,
   Copy,
   ExternalLink,
@@ -11,13 +12,30 @@ import {
   Phone,
   Search,
   Send,
+  Truck,
 } from 'lucide-react'
 import { productApi } from '../../api/catalog'
 import { settingsApi } from '../../api/settings'
+import { restockHistoryApi } from '../../api/restockHistory'
 import { useProducts } from '../../hooks/useCatalog'
 import { getErrorMessage } from '../../api/auth'
 import RestockModal from '../../components/RestockModal'
-import type { Product } from '../../types'
+import type { Product, RestockHistoryEvent } from '../../types'
+
+const DELIVERY_LABELS: Record<string, string> = {
+  SUPPLIER: 'Supplier delivered',
+  COURIER: 'Courier',
+  SELF_PICKUP: 'Self pickup',
+  OTHER: 'Other',
+}
+
+const deliveryLabel = (method: string | null) =>
+  method ? DELIVERY_LABELS[method] ?? method : 'Delivery'
+
+const formatDay = (iso: string | null) =>
+  iso
+    ? new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: 'medium' })
+    : '—'
 
 export default function Restock() {
   const queryClient = useQueryClient()
@@ -26,6 +44,17 @@ export default function Restock() {
   const [onlyLow, setOnlyLow] = useState(false)
   const [restockTarget, setRestockTarget] = useState<Product | null>(null)
   const [bulkLoading, setBulkLoading] = useState(false)
+
+  // Pending deliveries (expected delivery date set — stock added on confirmation)
+  const { data: pending } = useQuery({
+    queryKey: ['pending-restocks'],
+    queryFn: restockHistoryApi.getPending,
+  })
+  const [deliveringId, setDeliveringId] = useState<number | null>(null)
+
+  // Auto-restock toggle (persisted in the backend)
+  const [autoRestockEnabled, setAutoRestockEnabled] = useState(true)
+  const [stockMsg, setStockMsg] = useState<string | null>(null)
 
   // WhatsApp alert number
   const [phone, setPhone] = useState('')
@@ -54,11 +83,32 @@ export default function Restock() {
         setMetaTemplateName(s.metaTemplateName || 'grocery_shop_restock_alert')
       })
       .catch(() => {})
+    settingsApi
+      .getStock()
+      .then((s) => setAutoRestockEnabled(s.autoRestockEnabled))
+      .catch(() => {})
   }, [])
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['products'] })
     queryClient.invalidateQueries({ queryKey: ['low-stock'] })
+    queryClient.invalidateQueries({ queryKey: ['pending-restocks'] })
+  }
+
+  const handleToggleAutoRestock = async () => {
+    const next = !autoRestockEnabled
+    setStockMsg(null)
+    try {
+      const s = await settingsApi.updateStock({ autoRestockEnabled: next })
+      setAutoRestockEnabled(s.autoRestockEnabled)
+      setStockMsg(
+        s.autoRestockEnabled
+          ? 'Auto-restock ON - sales that hit the minimum add the sold quantity back automatically.'
+          : 'Auto-restock OFF - sales now just alert when an item hits its minimum; restock manually or schedule a delivery.'
+      )
+    } catch (err) {
+      setStockMsg(getErrorMessage(err))
+    }
   }
 
   const lowProducts = (products ?? []).filter((p) => p.stock <= 0 || p.lowStock)
@@ -74,12 +124,40 @@ export default function Restock() {
         (p) =>
           p.name.toLowerCase().includes(q) ||
           (p.code ?? '').toLowerCase().includes(q) ||
+          (p.brand ?? '').toLowerCase().includes(q) ||
           (p.supplierName ?? '').toLowerCase().includes(q) ||
           (p.categoryName ?? '').toLowerCase().includes(q)
       )
     }
-    return list
+    // Fully out of stock sinks to the bottom of the list.
+    const rank = (p: Product) => (p.stock <= 0 ? 2 : p.lowStock ? 1 : 0)
+    return [...list].sort((a, b) => rank(a) - rank(b))
   }, [products, onlyLow, search])
+
+  const handleMarkDelivered = async (event: RestockHistoryEvent) => {
+    const today = new Date().toISOString().slice(0, 10)
+    const received =
+      window.prompt(
+        `Received date for ${event.productName ?? 'product'} (${event.quantity} units)?\nLeave blank for today (${today}).`,
+        today
+      ) ?? ''
+    if (received === '') return
+    setDeliveringId(event.id)
+    try {
+      await restockHistoryApi.deliver(event.id, received || undefined)
+      refresh()
+    } catch (err) {
+      alert(getErrorMessage(err))
+    } finally {
+      setDeliveringId(null)
+    }
+  }
+
+  const pendingDue = (event: RestockHistoryEvent) => {
+    if (!event.expectedDelivery) return false
+    const expected = new Date(`${event.expectedDelivery}T00:00:00`).getTime()
+    return Date.now() >= expected
+  }
 
   const handleRestockAllLow = async () => {
     const items = products?.filter((p) => p.stock >= 0 && p.lowStock) ?? []
@@ -183,7 +261,104 @@ export default function Restock() {
         <div className="mb-4 px-4 py-3 rounded-lg bg-red-600 text-white text-sm">
           <AlertTriangle className="inline h-4 w-4 mr-1 -mt-0.5" />
           {lowProducts.length} product{lowProducts.length === 1 ? '' : 's'} at or below minimum stock
-          — auto-restock topped them up at sale time, or top them up manually below.
+          {autoRestockEnabled
+            ? ' — auto-restock topped them up at sale time, or top them up manually below.'
+            : ' — auto-restock is OFF, so top them up manually or schedule a delivery below.'}
+        </div>
+      )}
+
+      {/* Stock behavior: auto-restock toggle */}
+      <div className="mb-6 rounded-xl bg-white shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <div className="flex items-start gap-3">
+            <PackagePlus className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Auto-restock</h3>
+              <p className="mt-0.5 text-xs text-gray-500">
+                ON: a sale that drops an item to its minimum adds the sold quantity back automatically
+                and alerts you + the supplier. OFF: sales simply leave the item low and alert — you
+                restock manually (top up now, or schedule a delivery with an expected date).
+              </p>
+              {stockMsg && (
+                <p className="mt-1 text-xs font-medium text-green-700">{stockMsg}</p>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={autoRestockEnabled}
+            onClick={handleToggleAutoRestock}
+            className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+              autoRestockEnabled ? 'bg-green-600' : 'bg-gray-300'
+            }`}
+            title={autoRestockEnabled ? 'Auto-restock is ON - click to turn off' : 'Auto-restock is OFF - click to turn on'}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${
+                autoRestockEnabled ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* Pending deliveries — expected date set, stock added only on confirmation */}
+      {pending !== undefined && pending.length > 0 && (
+        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <CalendarClock className="h-4 w-4 text-amber-700" />
+            <h3 className="text-sm font-bold text-amber-900">
+              Pending deliveries ({pending.length}) — stock NOT added yet
+            </h3>
+          </div>
+          <div className="space-y-2">
+            {pending.map((event) => {
+              const due = pendingDue(event)
+              return (
+                <div
+                  key={event.id}
+                  className={`flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg border p-2.5 ${
+                    due ? 'border-red-300 bg-red-50' : 'border-amber-200 bg-white'
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold text-gray-900">
+                      {event.productName ?? 'Product'}
+                      <span className="ml-2 font-normal text-gray-500">
+                        +{event.quantity} units
+                      </span>
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Expected {formatDay(event.expectedDelivery)} ·{' '}
+                      {event.deliveryMethod ? deliveryLabel(event.deliveryMethod) : 'Delivery'}
+                    </p>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      due ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'
+                    }`}
+                  >
+                    {due ? 'Due / overdue' : 'Upcoming'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleMarkDelivered(event)}
+                    disabled={deliveringId === event.id}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <Truck className="h-3.5 w-3.5" />
+                    {deliveringId === event.id ? 'Adding…' : 'Mark Delivered'}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-[11px] text-amber-800">
+            Stock is only added when you click Mark Delivered (even on the expected date — deliveries
+            can run late). You and your staff get an in-app reminder banner, and the admin gets a
+            daily WhatsApp reminder until the delivery is confirmed.
+          </p>
         </div>
       )}
 
@@ -347,7 +522,7 @@ export default function Restock() {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by product, code, category or supplier…"
+            placeholder="Search by product, code, brand, category or supplier…"
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
         </div>
@@ -382,12 +557,20 @@ export default function Restock() {
             </thead>
             <tbody>
               {filtered.map((product) => {
-                const danger = product.stock <= 0 || product.lowStock
+                const out = product.stock <= 0
+                const low = !out && product.lowStock
+                const rowCls = out
+                  ? 'border-b last:border-0 bg-gray-200 opacity-60 grayscale'
+                  : low
+                    ? 'border-b last:border-0 bg-red-600'
+                    : 'border-b last:border-0 hover:bg-gray-50'
+                const nameCol = out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'
+                const codeCol = out ? 'text-gray-400' : low ? 'text-red-100' : 'text-gray-400'
+                const bodyCol = out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-600'
+                const stockMain = out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'
+                const stockSub = out ? 'text-gray-400' : low ? 'text-red-100' : 'text-gray-500'
                 return (
-                  <tr
-                    key={product.id}
-                    className={`border-b last:border-0 ${danger ? 'bg-red-600' : 'hover:bg-gray-50'}`}
-                  >
+                  <tr key={product.id} className={rowCls}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         {product.imageUrl ? (
@@ -398,34 +581,26 @@ export default function Restock() {
                           />
                         ) : (
                           <PackageSearch
-                            className={`h-5 w-5 ${danger ? 'text-white' : 'text-gray-300'}`}
+                            className={`h-5 w-5 ${out ? 'text-gray-400' : low ? 'text-white' : 'text-gray-300'}`}
                           />
                         )}
                         <div>
-                          <p className={`font-medium ${danger ? 'text-white' : 'text-gray-900'}`}>
-                            {product.name}
-                          </p>
-                          <p className={`font-mono text-[11px] ${danger ? 'text-red-100' : 'text-gray-400'}`}>
-                            {product.code ?? '—'}
-                          </p>
+                          <p className={`font-medium ${nameCol}`}>{product.name}</p>
+                          <p className={`font-mono text-[11px] ${codeCol}`}>{product.code ?? '—'}</p>
+                          {product.brand && (
+                            <p className={`text-[11px] ${codeCol}`}>{product.brand}</p>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className={`px-4 py-3 ${danger ? 'text-white' : 'text-gray-600'}`}>
-                      {product.categoryName ?? '-'}
-                    </td>
-                    <td className={`px-4 py-3 ${danger ? 'text-white' : 'text-gray-600'}`}>
-                      {product.supplierName ?? '-'}
-                    </td>
-                    <td className={`px-4 py-3 ${danger ? 'text-white' : 'text-gray-600'}`}>
-                      ${product.price.toFixed(2)}
-                    </td>
+                    <td className={`px-4 py-3 ${bodyCol}`}>{product.categoryName ?? '-'}</td>
+                    <td className={`px-4 py-3 ${bodyCol}`}>{product.supplierName ?? '-'}</td>
+                    <td className={`px-4 py-3 ${bodyCol}`}>${product.price.toFixed(2)}</td>
                     <td className="px-4 py-3">
-                      <span className={`text-sm font-bold ${danger ? 'text-white' : 'text-gray-900'}`}>
-                        {product.stock}
-                      </span>{' '}
-                      <span className={`text-[11px] ${danger ? 'text-red-100' : 'text-gray-500'}`}>
+                      <span className={`text-sm font-bold ${stockMain}`}>{product.stock}</span>{' '}
+                      <span className={`text-[11px] ${stockSub}`}>
                         left · sold {product.soldCount ?? 0} · min {product.minStock}
+                        {out ? ' · OUT!' : low ? ' · LOW!' : ''}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right">
@@ -433,7 +608,7 @@ export default function Restock() {
                         onClick={() => setRestockTarget(product)}
                         title={`Restock ${product.name}`}
                         className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-                          danger
+                          low
                             ? 'bg-white text-red-600 hover:bg-red-100'
                             : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
@@ -448,8 +623,9 @@ export default function Restock() {
             </tbody>
           </table>
           <p className="px-4 py-3 text-xs text-gray-400">
-            Automatic restock is on — when a sale drops an item to its minimum, the sold quantity is
-            added back and the admin + supplier get a WhatsApp alert.
+            {autoRestockEnabled
+              ? 'Automatic restock is ON — when a sale drops an item to its minimum, the sold quantity is added back and the admin + supplier get a WhatsApp alert. Fully out of stock items are greyed out, cannot be billed and are listed last.'
+              : 'Automatic restock is OFF — sales only alert when an item hits its minimum; stock is never added by itself. Restock manually: add stock now, or schedule a delivery with an expected date and confirm it when it arrives.'}
           </p>
         </div>
       )}

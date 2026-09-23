@@ -11,6 +11,7 @@ import com.groceryshop.product.Product;
 import com.groceryshop.product.ProductRepository;
 import com.groceryshop.product.RestockActivityService;
 import com.groceryshop.restock.RestockHistoryService;
+import com.groceryshop.settings.StockSettingsService;
 import com.groceryshop.user.User;
 import com.groceryshop.util.CurrentUserUtil;
 import com.groceryshop.whatsapp.WhatsAppService;
@@ -43,6 +44,7 @@ public class BillService {
     private final WhatsAppService whatsAppService;
     private final RestockActivityService restockActivityService;
     private final RestockHistoryService restockHistoryService;
+    private final StockSettingsService stockSettingsService;
 
     /**
      * Creates a point-of-sale bill for a walk-in customer and reduces product stock
@@ -66,6 +68,8 @@ public class BillService {
         Map<Long, Product> hitLimit = new LinkedHashMap<>();
         // Auto-restocked quantity per product id (same number as sold, restoring pre-sale stock).
         Map<Long, Integer> autoRestocked = new HashMap<>();
+        // Auto-restock can be switched off: then the sale just leaves stock low and alerts.
+        boolean autoRestock = stockSettingsService.isAutoRestockEnabled();
 
         for (CreateBillRequest.BillItemRequest item : request.getItems()) {
             Product product = productRepository.findById(item.getProductId())
@@ -90,13 +94,15 @@ public class BillService {
             product.setStock(product.getStock() - item.getQuantity());
             affectedProducts.add(product);
 
-            // Auto-restock: when a sale brings stock to (or below) the minimum,
-            // put back the same quantity that was just sold so stock returns to
-            // the level before this purchase, and alert admin + supplier.
+            // When a sale brings stock to (or below) the minimum: with auto-restock
+            // on, put back the same quantity that was just sold so stock returns to
+            // the level before this purchase. Either way, alert admin + supplier.
             if (product.getStock() <= product.getMinStock()) {
-                product.setStock(product.getStock() + item.getQuantity());
                 hitLimit.putIfAbsent(product.getId(), product);
-                autoRestocked.merge(product.getId(), item.getQuantity(), Integer::sum);
+                if (autoRestock) {
+                    product.setStock(product.getStock() + item.getQuantity());
+                    autoRestocked.merge(product.getId(), item.getQuantity(), Integer::sum);
+                }
             }
         }
 

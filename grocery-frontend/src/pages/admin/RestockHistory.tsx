@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { History, PackagePlus, RefreshCw, Search, Truck } from 'lucide-react'
+import { CalendarClock, History, PackagePlus, RefreshCw, Search, Truck } from 'lucide-react'
 import { restockHistoryApi } from '../../api/restockHistory'
+import { getErrorMessage } from '../../api/auth'
 
 const DELIVERY_LABELS: Record<string, string> = {
   SUPPLIER: 'Supplier delivered',
@@ -24,8 +25,32 @@ export default function RestockHistory() {
   })
   const [filter, setFilter] = useState<'ALL' | 'AUTO' | 'MANUAL'>('ALL')
   const [search, setSearch] = useState('')
+  const [deliveringId, setDeliveringId] = useState<number | null>(null)
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['restock-history'] })
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ['restock-history'] })
+    queryClient.invalidateQueries({ queryKey: ['pending-restocks'] })
+    queryClient.invalidateQueries({ queryKey: ['products'] })
+  }
+
+  const handleDeliver = async (id: number, productName: string | null, qty: number) => {
+    const today = new Date().toISOString().slice(0, 10)
+    const received =
+      window.prompt(
+        `Received date for ${productName ?? 'product'} (${qty} units)?\nLeave blank for today (${today}).`,
+        today
+      ) ?? ''
+    if (received === '') return
+    setDeliveringId(id)
+    try {
+      await restockHistoryApi.deliver(id, received || undefined)
+      refresh()
+    } catch (err) {
+      alert(getErrorMessage(err))
+    } finally {
+      setDeliveringId(null)
+    }
+  }
 
   const filtered = useMemo(() => {
     let list = events ?? []
@@ -42,12 +67,16 @@ export default function RestockHistory() {
   }, [events, filter, search])
 
   const totals = useMemo(() => {
-    const list = events ?? []
+    const all = events ?? []
+    const received = all.filter((e) => e.status !== 'PENDING')
+    const pending = all.filter((e) => e.status === 'PENDING')
     return {
-      total: list.reduce((s, e) => s + e.quantity, 0),
-      auto: list.filter((e) => e.eventType === 'AUTO').reduce((s, e) => s + e.quantity, 0),
-      manual: list.filter((e) => e.eventType === 'MANUAL').reduce((s, e) => s + e.quantity, 0),
-      count: list.length,
+      total: received.reduce((s, e) => s + e.quantity, 0),
+      auto: received.filter((e) => e.eventType === 'AUTO').reduce((s, e) => s + e.quantity, 0),
+      manual: received.filter((e) => e.eventType === 'MANUAL').reduce((s, e) => s + e.quantity, 0),
+      pending: pending.reduce((s, e) => s + e.quantity, 0),
+      pendingCount: pending.length,
+      count: received.length,
     }
   }, [events])
 
@@ -89,12 +118,15 @@ export default function RestockHistory() {
           </div>
           <p className="text-2xl font-bold text-gray-900">{totals.manual}</p>
         </div>
-        <div className="rounded-xl bg-white shadow-sm p-4">
-          <div className="flex items-center gap-2 text-gray-600 mb-1">
-            <History className="h-4 w-4" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Events</span>
+        <div className="rounded-xl bg-white shadow-sm p-4 border border-amber-200">
+          <div className="flex items-center gap-2 text-amber-600 mb-1">
+            <CalendarClock className="h-4 w-4" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">Pending deliveries</span>
           </div>
-          <p className="text-2xl font-bold text-gray-900">{totals.count}</p>
+          <p className="text-2xl font-bold text-gray-900">
+            {totals.pendingCount}{' '}
+            <span className="text-sm font-normal text-gray-500">({totals.pending} units)</span>
+          </p>
         </div>
       </div>
 
@@ -143,61 +175,107 @@ export default function RestockHistory() {
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Date &amp; time</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Product</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Qty</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Status</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Type</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Delivery</th>
-                <th className="text-left px-4 py-3 font-semibold text-gray-700">Received on</th>
+                <th className="text-left px-4 py-3 font-semibold text-gray-700">Received / expected</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Cost / unit</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">Notes</th>
                 <th className="text-left px-4 py-3 font-semibold text-gray-700">By</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map((e) => (
-                <tr key={e.id} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDT(e.createdAt)}</td>
-                  <td className="px-4 py-3">
-                    <span className="font-medium text-gray-900">{e.productName ?? '-'}</span>
-                    {e.productCode && (
-                      <span className="ml-1 font-mono text-[11px] text-gray-400">{e.productCode}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`font-bold ${
-                        e.eventType === 'AUTO' ? 'text-green-700' : 'text-blue-700'
-                      }`}
-                    >
-                      +{e.quantity}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                        e.eventType === 'AUTO'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {e.eventType === 'AUTO' ? 'Auto-restock' : 'Manual'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {e.eventType === 'AUTO' ? (
-                      <span className="text-gray-400">Returned from sale</span>
-                    ) : (
-                      (e.deliveryMethod && DELIVERY_LABELS[e.deliveryMethod]) ?? '—'
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{formatDay(e.receivedAt)}</td>
-                  <td className="px-4 py-3 text-gray-600">
-                    {e.costPerUnit != null ? `$${e.costPerUnit.toFixed(2)}` : '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={e.notes ?? ''}>
-                    {e.notes ?? '—'}
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{e.createdBy ?? '—'}</td>
-                </tr>
-              ))}
+              {filtered.map((e) => {
+                const pendingRow = e.status === 'PENDING'
+                const expected = e.expectedDelivery ? new Date(`${e.expectedDelivery}T00:00:00`).getTime() : null
+                const overdue = expected !== null && Date.now() > expected
+                return (
+                  <tr
+                    key={e.id}
+                    className={`border-b last:border-0 ${
+                      pendingRow ? 'bg-amber-50' : 'hover:bg-gray-50'
+                    }`}
+                  >
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDT(e.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-medium text-gray-900">{e.productName ?? '-'}</span>
+                      {e.productCode && (
+                        <span className="ml-1 font-mono text-[11px] text-gray-400">{e.productCode}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`font-bold ${
+                          pendingRow
+                            ? 'text-amber-700'
+                            : e.eventType === 'AUTO'
+                              ? 'text-green-700'
+                              : 'text-blue-700'
+                        }`}
+                      >
+                        +{e.quantity}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      {pendingRow ? (
+                        <div className="flex flex-col items-start gap-1.5">
+                          <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                            Awaiting delivery
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeliver(e.id, e.productName, e.quantity)}
+                            disabled={deliveringId === e.id}
+                            className="inline-flex items-center gap-1 rounded-md bg-green-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-green-700 disabled:opacity-50"
+                          >
+                            <Truck className="h-3 w-3" />
+                            {deliveringId === e.id ? 'Adding…' : 'Mark Delivered'}
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="inline-block rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-bold text-green-700">
+                          Delivered
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                          e.eventType === 'AUTO'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-blue-100 text-blue-700'
+                        }`}
+                      >
+                        {e.eventType === 'AUTO' ? 'Auto-restock' : 'Manual'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {e.eventType === 'AUTO' ? (
+                        <span className="text-gray-400">Returned from sale</span>
+                      ) : (
+                        (e.deliveryMethod && DELIVERY_LABELS[e.deliveryMethod]) ?? '—'
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {pendingRow ? (
+                        <span className={`text-[13px] font-medium ${overdue ? 'text-red-600' : 'text-amber-700'}`}>
+                          expected {formatDay(e.expectedDelivery)}
+                          {overdue ? ' · late' : ''}
+                        </span>
+                      ) : (
+                        formatDay(e.receivedAt)
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">
+                      {e.costPerUnit != null ? `$${e.costPerUnit.toFixed(2)}` : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={e.notes ?? ''}>
+                      {e.notes ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{e.createdBy ?? '—'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           <p className="px-4 py-3 text-xs text-gray-400">
