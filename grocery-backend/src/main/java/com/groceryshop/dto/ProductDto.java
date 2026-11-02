@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -12,10 +13,18 @@ public class ProductDto {
 
     private Long id;
     private String name;
+    /** Internal short till code, e.g. "0001". */
     private String code;
+    /** Printed barcode, matched by the scanner. */
+    private String barcode;
     private String description;
     private String brand;
+    private String rack;
     private BigDecimal price;
+    /** Buying (cost) price per unit. */
+    private BigDecimal costPrice;
+    /** Expiry date of the current stock. */
+    private LocalDate expiryDate;
     private Integer stock;
     private Integer minStock;
     private String imageUrl;
@@ -23,6 +32,7 @@ public class ProductDto {
     private String categoryName;
     private Long supplierId;
     private String supplierName;
+    private String shop;
     private boolean lowStock;
 
     /** Total units of this product sold so far (POS bills + orders, cancelled excluded). */

@@ -4,6 +4,7 @@ import com.groceryshop.user.Role;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
@@ -17,4 +18,7 @@ public class UserDto {
     private String phone;
     private Role role;
     private LocalDateTime createdAt;
+
+    /** Fixed monthly salary, editable by the admin. */
+    private BigDecimal monthlySalary;
 }

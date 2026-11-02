@@ -13,4 +13,6 @@ public class DailySalesDto {
     private String label;   // weekday ("Mon") for weekly, day-of-month for monthly
     private BigDecimal total;
     private long billCount;
+    /** Profit for this day = (selling - buying), net of discounts. */
+    private BigDecimal profit;
 }

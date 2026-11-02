@@ -17,3 +17,11 @@ export function formatDateTime(dateString: string): string {
     minute: '2-digit',
   })
 }
+
+/** Formats a number as Indian Rupees, e.g. ₹1,23,456.78. */
+export function formatINR(amount: number): string {
+  return `₹${amount.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+}

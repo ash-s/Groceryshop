@@ -1,8 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { CalendarClock, CheckCircle2, X } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { CalendarClock, CheckCircle2, X, Camera } from 'lucide-react'
+import ScanInput from './ScanInput'
 import { productApi } from '../api/catalog'
 import { getErrorMessage } from '../api/auth'
 import type { Product } from '../types'
+
+// Lazy load the camera scanner to keep bundle small
+const CameraScanner = lazy(() => import('./CameraScanner'))
 
 const DELIVERY_OPTIONS = [
   { value: 'SUPPLIER', label: 'Supplier delivered' },
@@ -30,9 +35,30 @@ export default function RestockModal({
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState<string | null>(null)
+  const [scannerOpen, setScannerOpen] = useState(false)
   const low = product.stock <= 0 || product.lowStock
 
   const pending = expectedDelivery.length > 0
+
+  const handleScan = (raw: string) => {
+    const code = raw.replace(/[\s\r\n]+/g, '').trim()
+    if (!code) return
+    // Only accept the packet that belongs to this product — never add stock to
+    // the wrong item because a nearby barcode got scanned.
+    const needle = code.toLowerCase()
+    const matches = [product.barcode, product.code].some(
+      (value) => (value ?? '').trim().toLowerCase() === needle
+    )
+    if (!matches) {
+      setError(
+        `Scanned "${code}" does not match ${product.name}. Scan the label on this product's packet.`
+      )
+      return
+    }
+    setQty('1')
+    setScannerOpen(false)
+    setError('')
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -72,7 +98,7 @@ export default function RestockModal({
   if (done) {
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-        <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
+        <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-4 sm:p-6">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
             <CheckCircle2 className="h-6 w-6 text-green-600" />
           </div>
@@ -94,7 +120,7 @@ export default function RestockModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold text-gray-900">Restock Product</h3>
           <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -115,6 +141,21 @@ export default function RestockModal({
           </p>
         </div>
 
+        {/* USB/Bluetooth gun types into this box, Enter confirms; camera on the right */}
+        <div className="mb-4 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <ScanInput onScan={handleScan} placeholder="Scan or type code" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            title="Scan with camera"
+            className="flex w-10 shrink-0 items-center justify-center self-stretch rounded-lg border border-green-600 bg-green-50 text-green-700 active:bg-green-100"
+          >
+            <Camera className="h-5 w-5" />
+          </button>
+        </div>
+
         {error && <div className="mb-4 px-4 py-2 rounded-md bg-red-50 text-red-700 text-sm">{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -133,7 +174,7 @@ export default function RestockModal({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 How was it delivered?
@@ -182,7 +223,7 @@ export default function RestockModal({
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {!pending && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Received on</label>
@@ -224,6 +265,12 @@ export default function RestockModal({
           </div>
         </form>
       </div>
+
+      {scannerOpen && (
+        <Suspense fallback={null}>
+          <CameraScanner onCode={handleScan} onClose={() => setScannerOpen(false)} title="Scan product barcode" />
+        </Suspense>
+      )}
     </div>
   )
 }

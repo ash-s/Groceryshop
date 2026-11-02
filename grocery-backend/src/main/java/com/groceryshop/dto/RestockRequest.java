@@ -30,4 +30,7 @@ public class RestockRequest {
     private LocalDate expectedDelivery;
 
     private String notes;
+
+    /** Which supplier this purchase is from (optional; falls back to the product's supplier). */
+    private Long supplierId;
 }

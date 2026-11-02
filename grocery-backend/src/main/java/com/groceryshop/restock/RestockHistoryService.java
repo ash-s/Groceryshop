@@ -7,8 +7,12 @@ import com.groceryshop.exception.ResourceNotFoundException;
 import com.groceryshop.product.Product;
 import com.groceryshop.product.ProductRepository;
 import com.groceryshop.product.RestockActivityService;
+import com.groceryshop.exception.ResourceNotFoundException;
+import com.groceryshop.exception.BadRequestException;
 import com.groceryshop.util.CurrentUserUtil;
 import com.groceryshop.whatsapp.WhatsAppService;
+import com.groceryshop.supplier.Supplier;
+import com.groceryshop.supplier.SupplierRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,7 @@ public class RestockHistoryService {
     private final RestockActivityService restockActivityService;
     private final CurrentUserUtil currentUserUtil;
     private final WhatsAppService whatsAppService;
+    private final SupplierRepository supplierRepository;
 
     /** Records an automatic sale-time top-up (no delivery involved). */
     public void recordAuto(Product product, int quantity, LocalDateTime at, String soldBy) {
@@ -43,7 +48,7 @@ public class RestockHistoryService {
         String createdBy = currentUserUtil.getCurrentUser().getUsername();
         LocalDateTime receivedAt = request.getReceivedAt() != null ? request.getReceivedAt() : LocalDateTime.now();
         save(product, request.getQuantity(), "MANUAL", method, receivedAt,
-                request.getCostPerUnit(), request.getNotes(), createdBy, LocalDateTime.now());
+                request.getCostPerUnit(), request.getNotes(), createdBy, LocalDateTime.now(), request.getSupplierId());
     }
 
     /**
@@ -65,6 +70,7 @@ public class RestockHistoryService {
                 .expectedDelivery(request.getExpectedDelivery())
                 .status(STATUS_PENDING)
                 .costPerUnit(request.getCostPerUnit())
+                .supplier(resolveSupplier(product, request.getSupplierId()))
                 .notes(trimToNull(request.getNotes()))
                 .createdBy(createdBy)
                 .createdAt(LocalDateTime.now())
@@ -123,7 +129,7 @@ public class RestockHistoryService {
             String supplier = product.getSupplier() != null ? product.getSupplier().getName() : "N/A";
             whatsAppService.sendDeliveryReminder(
                     product.getName(),
-                    product.getCode(),
+                    product.getBarcode() != null ? product.getBarcode() : product.getCode(),
                     event.getQuantity(),
                     event.getExpectedDelivery(),
                     event.getDeliveryMethod(),
@@ -140,8 +146,19 @@ public class RestockHistoryService {
         return restockEventRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toDto).toList();
     }
 
+    public List<RestockEventDto> getBySupplier(Long supplierId) {
+        return restockEventRepository.findBySupplierIdOrderByCreatedAtDesc(supplierId).stream()
+                .map(this::toDto).toList();
+    }
+
     private void save(Product product, int quantity, String type, String method, LocalDateTime receivedAt,
                       java.math.BigDecimal costPerUnit, String notes, String createdBy, LocalDateTime createdAt) {
+        save(product, quantity, type, method, receivedAt, costPerUnit, notes, createdBy, createdAt, null);
+    }
+
+    private void save(Product product, int quantity, String type, String method, LocalDateTime receivedAt,
+                      java.math.BigDecimal costPerUnit, String notes, String createdBy, LocalDateTime createdAt,
+                      Long supplierId) {
         RestockEvent event = RestockEvent.builder()
                 .product(product)
                 .quantity(quantity)
@@ -150,11 +167,20 @@ public class RestockHistoryService {
                 .receivedAt(receivedAt)
                 .status(STATUS_DELIVERED)
                 .costPerUnit(costPerUnit)
+                .supplier(resolveSupplier(product, supplierId))
                 .notes(notes != null && !notes.isBlank() ? notes.trim() : null)
                 .createdBy(createdBy)
                 .createdAt(createdAt)
                 .build();
         restockEventRepository.save(event);
+    }
+
+    private Supplier resolveSupplier(Product product, Long supplierId) {
+        if (supplierId != null) {
+            return supplierRepository.findById(supplierId)
+                    .orElseThrow(() -> new BadRequestException("Supplier not found: " + supplierId));
+        }
+        return product != null ? product.getSupplier() : null;
     }
 
     private String normalizeDeliveryMethod(String method) {
@@ -179,7 +205,9 @@ public class RestockHistoryService {
                 .id(event.getId())
                 .productId(product != null ? product.getId() : null)
                 .productName(product != null ? product.getName() : null)
-                .productCode(product != null ? product.getCode() : null)
+                .productCode(product != null
+                        ? (product.getBarcode() != null ? product.getBarcode() : product.getCode())
+                        : null)
                 .quantity(event.getQuantity())
                 .eventType(event.getEventType())
                 .deliveryMethod(event.getDeliveryMethod())
@@ -188,6 +216,7 @@ public class RestockHistoryService {
                 .status(event.getStatus())
                 .deliveredAt(event.getDeliveredAt())
                 .costPerUnit(event.getCostPerUnit())
+                .supplierId(event.getSupplier() != null ? event.getSupplier().getId() : null)
                 .notes(event.getNotes())
                 .createdBy(event.getCreatedBy())
                 .createdAt(event.getCreatedAt())

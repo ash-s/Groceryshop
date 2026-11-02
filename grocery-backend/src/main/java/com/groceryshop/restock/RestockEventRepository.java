@@ -14,4 +14,7 @@ public interface RestockEventRepository extends JpaRepository<RestockEvent, Long
 
     /** Pending purchases whose expected delivery has already arrived (due or overdue). */
     List<RestockEvent> findByStatusAndExpectedDeliveryLessThanEqual(String status, LocalDate expectedDelivery);
+
+    /** Purchases recorded against a supplier, newest first. */
+    List<RestockEvent> findBySupplierIdOrderByCreatedAtDesc(Long supplierId);
 }

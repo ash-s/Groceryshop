@@ -5,6 +5,81 @@ body {
   background-color: #f9fafb;
 }
 
+/* ---------- Camera scanner (Paytm-style beam) ---------- */
+@keyframes scan-beam {
+  0%,
+  100% {
+    top: 4%;
+    opacity: 0.35;
+  }
+  14% {
+    opacity: 1;
+  }
+  50% {
+    top: 92%;
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+}
+
+.scan-beam {
+  top: 4%;
+  background: linear-gradient(
+    90deg,
+    rgba(74, 222, 128, 0) 0%,
+    rgba(74, 222, 128, 0.95) 18%,
+    #ecfdf5 50%,
+    rgba(74, 222, 128, 0.95) 82%,
+    rgba(74, 222, 128, 0) 100%
+  );
+  box-shadow: 0 0 12px 2px rgba(52, 211, 153, 0.85), 0 0 34px 8px rgba(52, 211, 153, 0.35);
+  animation: scan-beam 2.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: top;
+}
+
+/* Soft trail behind the beam */
+.scan-beam::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 46px;
+  background: linear-gradient(to top, rgba(52, 211, 153, 0.38), rgba(52, 211, 153, 0));
+}
+
+@keyframes bracket-glow {
+  0%,
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.85));
+  }
+  50% {
+    opacity: 0.72;
+    filter: drop-shadow(0 0 12px rgba(52, 211, 153, 0.55));
+  }
+}
+
+.scan-bracket {
+  animation: bracket-glow 1.9s ease-in-out infinite;
+}
+
+@keyframes scan-flash {
+  0% {
+    background: rgba(52, 211, 153, 0.55);
+  }
+  100% {
+    background: rgba(52, 211, 153, 0);
+  }
+}
+
+.scan-flash {
+  animation: scan-flash 500ms ease-out forwards;
+}
+
+
 /* Hide scrollbars everywhere while keeping scrolling fully functional */
 * {
   scrollbar-width: none;        /* Firefox */
@@ -12,4 +87,45 @@ body {
 }
 *::-webkit-scrollbar {
   display: none;                /* Chrome, Safari, Edge */
+}
+
+/* Mobile-friendly data tables: keep columns readable and let them scroll
+   sideways instead of squeezing the text into unreadable slivers. */
+@media (max-width: 1023px) {
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+  .table-scroll table {
+    min-width: 680px;
+    border-spacing: 0;
+  }
+  .table-scroll.table-scroll-wide table {
+    min-width: 880px;
+  }
+  .table-scroll table th,
+  .table-scroll table td {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+  /* Closing margin + edge line so a swiped table never looks cut off. */
+  .table-scroll table th:last-child,
+  .table-scroll table td:last-child {
+    padding-right: 1.25rem;
+    border-right: 1px solid #e5e7eb;
+  }
+  .table-scroll table tr:last-child td {
+    border-bottom: 1px solid #e5e7eb;
+  }
+  /* A slim scrollbar so it is obvious the table can be swiped. */
+  .table-scroll::-webkit-scrollbar {
+    display: block;
+    height: 6px;
+  }
+  .table-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 9999px;
+  }
 }

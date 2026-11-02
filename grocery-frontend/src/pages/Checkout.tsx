@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { formatINR } from '../lib/format'
 import { useNavigate, Link } from 'react-router-dom'
 import { useCart } from '../hooks/useCart'
 import { usePlaceOrder } from '../hooks/useOrders'
@@ -26,7 +27,7 @@ export default function Checkout() {
     )
   }
 
-  const total = cart.subtotal + 2
+  const total = cart.subtotal + 100
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -111,22 +112,22 @@ export default function Checkout() {
                   <span className="text-gray-600">
                     {item.productName} × {item.quantity}
                   </span>
-                  <span className="font-medium">${item.subtotal.toFixed(2)}</span>
+                  <span className="font-medium">{formatINR(item.subtotal)}</span>
                 </div>
               ))}
             </div>
             <div className="border-t pt-2 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span>${cart.subtotal.toFixed(2)}</span>
+                <span>{formatINR(cart.subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Delivery</span>
-                <span>$2.00</span>
+                <span>{formatINR(100)}</span>
               </div>
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span className="text-green-700">${total.toFixed(2)}</span>
+                <span className="text-green-700">{formatINR(total)}</span>
               </div>
             </div>
             <button

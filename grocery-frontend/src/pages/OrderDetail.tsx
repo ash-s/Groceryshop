@@ -1,7 +1,7 @@
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { useMyOrders } from '../hooks/useOrders'
 import OrderStatusBadge from '../components/OrderStatusBadge'
-import { formatDateTime } from '../lib/format'
+import { formatDateTime, formatINR } from '../lib/format'
 
 export default function OrderDetail() {
   const { id } = useParams<{ id: string }>()
@@ -41,13 +41,13 @@ export default function OrderDetail() {
                 <span className="font-medium text-gray-900">{item.productName}</span>
                 <span className="text-sm text-gray-500"> × {item.quantity}</span>
               </div>
-              <span className="font-medium">${item.subtotal.toFixed(2)}</span>
+              <span className="font-medium">{formatINR(item.subtotal)}</span>
             </div>
           ))}
         </div>
         <div className="border-t mt-4 pt-4 flex justify-between">
           <span className="font-bold text-gray-900">Total</span>
-          <span className="font-bold text-green-700">${order.total.toFixed(2)}</span>
+          <span className="font-bold text-green-700">{formatINR(order.total)}</span>
         </div>
       </div>
 

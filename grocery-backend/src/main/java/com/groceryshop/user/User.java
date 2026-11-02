@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -44,4 +45,8 @@ public class User {
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /** Fixed monthly salary, editable by the admin. Null when not set. */
+    @Column(name = "monthly_salary", precision = 10, scale = 2)
+    private BigDecimal monthlySalary;
 }

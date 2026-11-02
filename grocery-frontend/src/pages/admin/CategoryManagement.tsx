@@ -5,6 +5,8 @@ import { categoryApi } from '../../api/catalog'
 import { useCategories } from '../../hooks/useCatalog'
 import { getErrorMessage } from '../../api/auth'
 import ImageUpload from '../../components/ImageUpload'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import type { Category } from '../../types'
 
 export default function CategoryManagement() {
@@ -13,6 +15,8 @@ export default function CategoryManagement() {
   const [editing, setEditing] = useState<Category | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [error, setError] = useState('')
+
+  const pager = usePagination(categories ?? [], 10)
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['categories'] })
@@ -53,10 +57,10 @@ export default function CategoryManagement() {
 
       {categories && categories.length === 0 ? (
         <p className="text-center py-16 text-gray-500">
-          No categories yet. Add your first one, then map products to it from the Products page.
+          No categories yet.
         </p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden table-scroll">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
@@ -67,7 +71,7 @@ export default function CategoryManagement() {
               </tr>
             </thead>
             <tbody>
-              {categories?.map((category) => (
+              {pager.pageItems.map((category) => (
                 <tr key={category.id} className="border-b last:border-0 hover:bg-gray-50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -114,6 +118,7 @@ export default function CategoryManagement() {
               ))}
             </tbody>
           </table>
+          <Pagination {...pager} itemLabel="categories" />
           <p className="px-4 py-3 text-xs text-gray-400">
             A category with mapped products can't be deleted — move its products to another category first.
           </p>

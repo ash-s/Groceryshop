@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, History, PackagePlus, RefreshCw, Search, Truck } from 'lucide-react'
+import { formatINR } from '../../lib/format'
 import { restockHistoryApi } from '../../api/restockHistory'
 import { getErrorMessage } from '../../api/auth'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 
 const DELIVERY_LABELS: Record<string, string> = {
   SUPPLIER: 'Supplier delivered',
@@ -66,6 +69,8 @@ export default function RestockHistory() {
     return list
   }, [events, filter, search])
 
+  const pager = usePagination(filtered, 10, `${filter}|${search}`)
+
   const totals = useMemo(() => {
     const all = events ?? []
     const received = all.filter((e) => e.status !== 'PENDING')
@@ -84,12 +89,12 @@ export default function RestockHistory() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Restock &amp; Purchase History</h2>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <h2 className="min-w-0 text-xl font-bold text-gray-900">Restock &amp; Purchase History</h2>
         <button
           onClick={refresh}
           title="Refresh history"
-          className="p-2 rounded-md border border-gray-300 text-gray-500 hover:text-green-700 hover:border-green-600"
+          className="shrink-0 p-2 rounded-md border border-gray-300 text-gray-500 hover:text-green-700 hover:border-green-600"
         >
           <RefreshCw className="h-4 w-4" />
         </button>
@@ -168,7 +173,7 @@ export default function RestockHistory() {
           manually from the Restock tab.
         </p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden table-scroll table-scroll-wide">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
@@ -185,7 +190,7 @@ export default function RestockHistory() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((e) => {
+              {pager.pageItems.map((e) => {
                 const pendingRow = e.status === 'PENDING'
                 const expected = e.expectedDelivery ? new Date(`${e.expectedDelivery}T00:00:00`).getTime() : null
                 const overdue = expected !== null && Date.now() > expected
@@ -267,7 +272,7 @@ export default function RestockHistory() {
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-600">
-                      {e.costPerUnit != null ? `$${e.costPerUnit.toFixed(2)}` : '—'}
+                      {e.costPerUnit != null ? formatINR(e.costPerUnit) : '—'}
                     </td>
                     <td className="px-4 py-3 text-gray-500 max-w-[220px] truncate" title={e.notes ?? ''}>
                       {e.notes ?? '—'}
@@ -278,6 +283,7 @@ export default function RestockHistory() {
               })}
             </tbody>
           </table>
+          <Pagination {...pager} itemLabel="restock events" />
           <p className="px-4 py-3 text-xs text-gray-400">
             Auto-restock events are logged when a sale drops an item to its minimum (quantity =
             units sold, stock returned to pre-sale level). Manual events record deliveries you

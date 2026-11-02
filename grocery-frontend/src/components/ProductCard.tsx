@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Salad } from 'lucide-react'
+import { formatINR } from '../lib/format'
 import type { Product } from '../types'
 import { useAddToCart } from '../hooks/useCart'
 import { useAuth } from '../context/AuthContext'
@@ -36,7 +37,7 @@ export default function ProductCard({ product }: { product: Product }) {
       </div>
 
       <div className="flex-1">
-        <h3 className={`font-medium mb-1 ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`mb-1 line-clamp-2 font-medium break-words ${out ? 'text-gray-500' : low ? 'text-white' : 'text-gray-900'}`}>
           {product.name}
         </h3>
         <p className="text-sm mb-2">
@@ -60,7 +61,7 @@ export default function ProductCard({ product }: { product: Product }) {
 
       <div className="flex items-center justify-between mt-2">
         <span className={`text-lg font-bold ${out ? 'text-gray-500' : low ? 'text-white' : 'text-green-700'}`}>
-          ${product.price.toFixed(2)}
+          {formatINR(product.price)}
         </span>
         <button
           onClick={handleAdd}

@@ -1,4 +1,5 @@
 import api from './client'
+import type { LoyaltySettings } from '../types'
 
 export interface WhatsAppSettings {
   ownerPhone: string
@@ -38,6 +39,14 @@ export const settingsApi = {
   },
   updateStock: async (settings: StockSettings) => {
     const res = await api.put<StockSettings>('/settings/stock', settings)
+    return res.data
+  },
+  getLoyalty: async () => {
+    const res = await api.get<LoyaltySettings>('/settings/loyalty')
+    return res.data
+  },
+  updateLoyalty: async (settings: LoyaltySettings) => {
+    const res = await api.put<LoyaltySettings>('/settings/loyalty', settings)
     return res.data
   },
 }

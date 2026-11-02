@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Salad, ShoppingCart, Trash2 } from 'lucide-react'
+import { formatINR } from '../lib/format'
 import { useCart, useUpdateCartQuantity, useRemoveFromCart } from '../hooks/useCart'
 
 export default function Cart() {
@@ -46,7 +47,7 @@ export default function Cart() {
                 <Link to={`/products/${item.productId}`} className="font-medium text-gray-900 hover:text-green-700">
                   {item.productName}
                 </Link>
-                <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
+                <p className="text-sm text-gray-500">{formatINR(item.price)} each</p>
               </div>
 
               <div className="flex items-center border border-gray-300 rounded-md">
@@ -66,7 +67,7 @@ export default function Cart() {
               </div>
 
               <span className="font-semibold text-gray-900 w-20 text-right">
-                ${item.subtotal.toFixed(2)}
+                {formatINR(item.subtotal)}
               </span>
 
               <button
@@ -87,11 +88,11 @@ export default function Cart() {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium">${cart.subtotal.toFixed(2)}</span>
+                <span className="font-medium">{formatINR(cart.subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Delivery Fee</span>
-                <span className="font-medium">$2.00</span>
+                <span className="font-medium">{formatINR(100)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Items</span>
@@ -99,7 +100,7 @@ export default function Cart() {
               </div>
               <div className="border-t pt-2 mt-2 flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span className="text-green-700">${(cart.subtotal + 2).toFixed(2)}</span>
+                <span className="text-green-700">{formatINR(cart.subtotal + 100)}</span>
               </div>
             </div>
             <Link

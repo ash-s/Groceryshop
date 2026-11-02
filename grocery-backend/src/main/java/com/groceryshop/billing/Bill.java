@@ -1,5 +1,6 @@
 package com.groceryshop.billing;
 
+import com.groceryshop.customer.Customer;
 import com.groceryshop.user.User;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -49,11 +50,47 @@ public class Bill {
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal total;
 
+    /** Discount (in rupees) applied to the whole bill at checkout. */
+    @Column(name = "discount_amount", precision = 10, scale = 2)
+    private BigDecimal discountAmount;
+
     @Column(name = "payment_method", length = 50)
     private String paymentMethod;
 
+    /** Optional link to a remembered customer (for loyalty points). */
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "customer_id")
+    private Customer customer;
+
+    @Column(name = "customer_phone", length = 20)
+    private String customerPhone;
+
+    /** Cash the customer handed over (change = cashGiven - total). */
+    @Column(name = "cash_given", precision = 10, scale = 2)
+    private BigDecimal cashGiven;
+
+    /** Which notes the customer gave, e.g. "500x1,100x2". */
+    @Column(name = "cash_notes", length = 255)
+    private String cashNotes;
+
+    /** Loyalty points spent on this bill. */
+    @Column(name = "points_redeemed")
+    private Integer pointsRedeemed;
+
+    /** Loyalty points earned on this bill. */
+    @Column(name = "points_earned")
+    private Integer pointsEarned;
+
+    /** Rupee value of the redeemed points (part of the total discount). */
+    @Column(name = "points_discount", precision = 10, scale = 2)
+    private BigDecimal pointsDiscount;
+
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(length = 20)
+    @Builder.Default
+    private String shop = "GROCERY";
 
     @OneToMany(mappedBy = "bill", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default

@@ -36,6 +36,8 @@ public class RestockEventDto {
 
     private BigDecimal costPerUnit;
     private String notes;
+    private Long supplierId;
+    private String supplierName;
     private String createdBy;
     private LocalDateTime createdAt;
 }

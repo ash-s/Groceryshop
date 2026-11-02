@@ -1,5 +1,11 @@
 package com.groceryshop.product;
 
+import com.groceryshop.dto.AutoMatchApplyRequest;
+import com.groceryshop.dto.AutoMatchApplyResult;
+import com.groceryshop.dto.AutoMatchRequest;
+import com.groceryshop.dto.AutoMatchResponse;
+import com.groceryshop.dto.BulkImportRequest;
+import com.groceryshop.dto.BulkImportResult;
 import com.groceryshop.dto.ProductDto;
 import com.groceryshop.dto.ProductRequest;
 import com.groceryshop.dto.RestockRequest;
@@ -22,7 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/products")
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
 public class ProductController {
 
@@ -31,8 +37,9 @@ public class ProductController {
     @GetMapping
     public ResponseEntity<List<ProductDto>> getAll(
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String search) {
-        return ResponseEntity.ok(productService.getAll(categoryId, search));
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String shop) {
+        return ResponseEntity.ok(productService.getAll(categoryId, search, shop));
     }
 
     @GetMapping("/{id}")
@@ -50,6 +57,28 @@ public class ProductController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductDto> create(@Valid @RequestBody ProductRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productService.create(request));
+    }
+
+    @PostMapping("/bulk-import")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BulkImportResult> bulkImport(@RequestBody BulkImportRequest request) {
+        return ResponseEntity.ok(productService.bulkImport(request));
+    }
+
+    /** One cursor-paged batch of barcode suggestions (Open Food Facts) for uncoded products. */
+    @PostMapping("/auto-match-barcodes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AutoMatchResponse> autoMatchBarcodes(
+            @RequestBody(required = false) AutoMatchRequest request) {
+        return ResponseEntity.ok(productService.autoMatchBarcodes(request));
+    }
+
+    /** Applies reviewed barcode suggestions to products. */
+    @PostMapping("/auto-match-barcodes/apply")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<AutoMatchApplyResult> applyBarcodeMatches(
+            @RequestBody AutoMatchApplyRequest request) {
+        return ResponseEntity.ok(productService.applyBarcodeMatches(request));
     }
 
     @PutMapping("/{id}")

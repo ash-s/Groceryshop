@@ -1,5 +1,7 @@
 package com.groceryshop.user;
 
+import com.groceryshop.auth.PasswordResetTokenRepository;
+import com.groceryshop.billing.BillRepository;
 import com.groceryshop.cart.CartItemRepository;
 import com.groceryshop.dto.AdminResetPasswordRequest;
 import com.groceryshop.dto.AdminResetPasswordResponse;
@@ -14,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -30,6 +33,8 @@ public class AdminUserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final OrderRepository orderRepository;
+    private final BillRepository billRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final CartItemRepository cartItemRepository;
     private final CurrentUserUtil currentUserUtil;
 
@@ -108,6 +113,14 @@ public class AdminUserService {
         return toDto(userRepository.save(user));
     }
 
+    /** Sets or clears a staff member's fixed monthly salary. */
+    @Transactional
+    public UserDto updateSalary(Long id, BigDecimal monthlySalary) {
+        User user = getUser(id);
+        user.setMonthlySalary(monthlySalary);
+        return toDto(userRepository.save(user));
+    }
+
     @Transactional
     public void deleteUser(Long id) {
         User admin = currentUserUtil.getCurrentUser();
@@ -125,6 +138,12 @@ public class AdminUserService {
                     "Cannot delete this user: they have order history. Reset their password instead.");
         }
 
+        if (billRepository.existsByStaffId(id)) {
+            throw new BadRequestException(
+                    "Cannot delete this user: they have billing history. Reset their password instead.");
+        }
+
+        passwordResetTokenRepository.deleteByUserId(id);
         cartItemRepository.deleteByUserId(id);
         userRepository.delete(user);
     }
@@ -155,6 +174,7 @@ public class AdminUserService {
                 .phone(user.getPhone())
                 .role(user.getRole())
                 .createdAt(user.getCreatedAt())
+                .monthlySalary(user.getMonthlySalary())
                 .build();
     }
 }

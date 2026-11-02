@@ -1,11 +1,9 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { ShoppingCart } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { useCart } from '../hooks/useCart'
 
 export default function Navbar() {
   const { isAuthenticated, user, logout } = useAuth()
-  const { data: cart } = useCart()
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -31,9 +29,6 @@ export default function Navbar() {
             <NavLink to="/" className={navLinkClass} end>Home</NavLink>
             <NavLink to="/products" className={navLinkClass}>Products</NavLink>
             {isAuthenticated && (
-              <NavLink to="/orders" className={navLinkClass}>Orders</NavLink>
-            )}
-            {isAuthenticated && (
               <NavLink
                 to={user?.role === 'ADMIN' ? '/admin' : '/admin/billing'}
                 className={navLinkClass}
@@ -44,18 +39,6 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center space-x-3">
-            <Link
-              to={isAuthenticated ? '/cart' : '/login'}
-              className="relative flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:text-green-700"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              {cart && cart.totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                  {cart.totalItems}
-                </span>
-              )}
-            </Link>
-
             {isAuthenticated ? (
               <>
                 <span className="hidden sm:inline text-sm text-gray-600">

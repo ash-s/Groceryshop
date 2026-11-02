@@ -23,6 +23,10 @@ export const adminUserApi = {
     const res = await api.put<User>(`/admin/users/${id}/role`, { role })
     return res.data
   },
+  updateSalary: async (id: number, monthlySalary: number | null) => {
+    const res = await api.put<User>(`/admin/users/${id}/salary`, { monthlySalary })
+    return res.data
+  },
   delete: async (id: number) => {
     await api.delete(`/admin/users/${id}`)
   },

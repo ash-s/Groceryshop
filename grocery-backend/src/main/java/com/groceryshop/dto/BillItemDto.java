@@ -14,4 +14,6 @@ public class BillItemDto {
     private Integer quantity;
     private BigDecimal price;
     private BigDecimal subtotal;
+    /** Buying price per unit at the time of sale. */
+    private BigDecimal costPrice;
 }

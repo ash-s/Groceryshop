@@ -1,0 +1,89 @@
+0:00:00 Startup
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpEphemeralProfiles
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpDeletedProfiles
+0:00:00 Microsoft.NewBrowser_App
+0:00:00 Microsoft.BrowserList.AddBrowser
+0:00:00 Tab1 StartNav1 #auto_toplevel
+0:00:00 Browser1 Insert active Tab1 at 0
+0:00:00 Tab1 FinishNav1
+0:00:01 Tab1 PageLoad
+0:00:01 Tab1 StartNav7 #renderer-script #link
+0:00:01 Tab1 FinishNav7
+0:00:04 Memory Pressure: Moderate
+0:00:12 ShowOptions
+0:00:00 Startup
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpEphemeralProfiles
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpDeletedProfiles
+0:00:00 Microsoft.NewBrowser_App
+0:00:00 Microsoft.BrowserList.AddBrowser
+0:00:00 Tab1 StartNav1 #auto_toplevel
+0:00:00 Browser1 Insert active Tab1 at 0
+0:00:00 Tab1 FinishNav1
+0:00:00 Tab1 PageLoad
+0:00:00 Tab1 StartNav2 #renderer-script #link
+0:00:00 Tab1 FinishNav2
+0:00:08 Tab1 StartNav3 #renderer-user #link
+0:00:08 Tab1 FinishNav3
+0:00:20 Widget Closed: StatusBubble
+0:00:25 Memory Pressure: Moderate
+0:00:35 Memory Pressure: None
+0:01:00 Memory Pressure: Moderate
+0:01:10 Memory Pressure: Moderate
+0:01:20 Memory Pressure: Moderate
+0:01:21 Autofill_OnWillSubmitForm
+0:01:22 Tab1 StartNav4 #renderer-user #link
+0:01:22 Tab1 FinishNav4
+0:01:22 PasswordManager_LoginPassed
+0:01:22 Microsoft.ENP.Framework.CourtesyEngine.FrequencyCappingAllowed
+0:01:22 Microsoft.Nurturing.Framework.CourtesyEngine.FrequencyCappingAllowed
+0:01:27 Widget Closed: PasswordBubbleViewBase
+0:01:30 Memory Pressure: Moderate
+0:01:40 Memory Pressure: Moderate
+0:01:50 Memory Pressure: Moderate
+0:02:00 Memory Pressure: Moderate
+0:02:10 Memory Pressure: Moderate
+0:02:20 Memory Pressure: Moderate
+0:02:30 Memory Pressure: Moderate
+0:02:40 Memory Pressure: Moderate
+0:02:50 Memory Pressure: Moderate
+0:03:00 Memory Pressure: Moderate
+0:03:10 Memory Pressure: Moderate
+0:03:20 Memory Pressure: Moderate
+0:03:30 Memory Pressure: Moderate
+0:03:40 Memory Pressure: Moderate
+0:03:50 Memory Pressure: Moderate
+0:04:00 Memory Pressure: Moderate
+0:04:10 Memory Pressure: Moderate
+0:04:20 Memory Pressure: Moderate
+0:04:30 Memory Pressure: Moderate
+0:04:40 Memory Pressure: Moderate
+0:04:45 Memory Pressure: None
+0:04:50 Memory Pressure: Moderate
+0:05:00 Memory Pressure: Moderate
+0:05:10 Memory Pressure: Moderate
+0:05:20 Memory Pressure: Moderate
+0:05:30 Memory Pressure: Moderate
+0:05:40 Memory Pressure: Moderate
+0:05:50 Memory Pressure: Moderate
+0:06:00 Memory Pressure: Moderate
+0:06:10 Memory Pressure: Moderate
+0:06:20 Memory Pressure: Moderate
+0:06:27 Widget Closed: TooltipAura
+0:06:30 Memory Pressure: Moderate
+0:06:40 Memory Pressure: Moderate
+0:06:50 Memory Pressure: Moderate
+0:06:55 Memory Pressure: None
+0:07:15 Memory Pressure: Moderate
+0:07:25 Memory Pressure: None
+0:07:41 Microsoft.UnloadController.IsUnclosableApp_IsNotWebApp
+0:00:00 Startup
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpEphemeralProfiles
+0:00:00 Microsoft.DeleteProfileHelper.CleanUpDeletedProfiles
+0:00:00 Microsoft.NewBrowser_App
+0:00:00 Microsoft.BrowserList.AddBrowser
+0:00:00 Tab1 StartNav1 #auto_toplevel
+0:00:00 Browser1 Insert active Tab1 at 0
+0:00:00 Tab1 FinishNav1
+0:00:00 Tab1 PageLoad
+0:00:00 Tab1 StartNav2 #renderer-script #link
+0:00:00 Tab1 FinishNav2

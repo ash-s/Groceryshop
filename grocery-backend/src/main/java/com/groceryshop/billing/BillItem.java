@@ -50,4 +50,8 @@ public class BillItem {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotal;
+
+    /** Buying (cost) price per unit at the time of sale, for profit reports. */
+    @Column(name = "cost_price", precision = 10, scale = 2)
+    private BigDecimal costPrice;
 }

@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/settings/whatsapp")
+@RequestMapping("/api/settings/whatsapp")
 @RequiredArgsConstructor
 public class WhatsAppSettingsController {
 

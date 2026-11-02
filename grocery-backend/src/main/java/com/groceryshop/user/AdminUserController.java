@@ -3,6 +3,7 @@ package com.groceryshop.user;
 import com.groceryshop.dto.AdminResetPasswordRequest;
 import com.groceryshop.dto.AdminResetPasswordResponse;
 import com.groceryshop.dto.CreateUserRequest;
+import com.groceryshop.dto.UpdateSalaryRequest;
 import com.groceryshop.dto.UpdateUserRoleRequest;
 import com.groceryshop.dto.UserDto;
 import jakarta.validation.Valid;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/admin/users")
+@RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminUserController {
@@ -49,6 +50,12 @@ public class AdminUserController {
     public ResponseEntity<UserDto> updateRole(
             @PathVariable Long id, @Valid @RequestBody UpdateUserRoleRequest request) {
         return ResponseEntity.ok(adminUserService.updateRole(id, request.getRole()));
+    }
+
+    @PutMapping("/{id}/salary")
+    public ResponseEntity<UserDto> updateSalary(
+            @PathVariable Long id, @Valid @RequestBody UpdateSalaryRequest request) {
+        return ResponseEntity.ok(adminUserService.updateSalary(id, request.getMonthlySalary()));
     }
 
     @DeleteMapping("/{id}")

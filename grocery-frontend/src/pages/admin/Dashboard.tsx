@@ -1,12 +1,17 @@
 import { useState } from 'react'
+import { formatINR } from '../../lib/format'
 import { Link } from 'react-router-dom'
 import {
   AlertTriangle,
   BarChart3,
   CheckCircle2,
   CreditCard,
+  FileSpreadsheet,
+  FileText,
+  Loader2,
   Package,
   Receipt,
+  TrendingUp,
   Truck,
   Users,
   Wallet,
@@ -16,6 +21,7 @@ import { useProducts, useLowStockProducts } from '../../hooks/useCatalog'
 import { useAllOrders } from '../../hooks/useOrders'
 import { useUsers } from '../../hooks/useUsers'
 import { useBills, useSalesReport } from '../../hooks/useBilling'
+import { downloadSalesCsv, downloadSalesPdf } from '../../lib/exportReport'
 import type { Bill, SalesReport } from '../../types'
 
 const ORDER_STATUS: Record<string, string> = {
@@ -98,7 +104,7 @@ function SalesBars({ report }: { report?: SalesReport }) {
         const x = pad + i * bw + (bw - barW) / 2
         return (
           <g key={d.date}>
-            <title>{`${d.date}: $${d.total.toFixed(2)} (${d.billCount} bills)`}</title>
+            <title>{`${d.date}: ${formatINR(d.total)} (${d.billCount} bills)`}</title>
             <rect
               x={x}
               y={H - 22 - hgt}
@@ -123,9 +129,22 @@ function SalesBars({ report }: { report?: SalesReport }) {
   )
 }
 
-function ReportCard() {
+function ReportCard({ bills }: { bills?: Bill[] }) {
   const [period, setPeriod] = useState<'weekly' | 'monthly'>('weekly')
+  const [downloading, setDownloading] = useState(false)
   const { data: report } = useSalesReport(period)
+
+  const canDownload = !!report && (report.daily?.length ?? 0) > 0
+
+  const handlePdf = async () => {
+    if (!report) return
+    setDownloading(true)
+    try {
+      await downloadSalesPdf(report, bills ?? [], period)
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -150,7 +169,7 @@ function ReportCard() {
 
       <div className="mb-4 flex flex-wrap gap-2">
         <span className="rounded-lg bg-green-50 px-3 py-1.5 text-sm text-green-700">
-          Total <b className="text-base">${report?.totalSales.toFixed(2) ?? '0.00'}</b>
+          Total <b className="text-base">{formatINR(report?.totalSales ?? 0)}</b>
         </span>
         <span className="rounded-lg bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
           Bills <b className="text-base">{report?.billCount ?? 0}</b>
@@ -158,9 +177,31 @@ function ReportCard() {
         <span className="rounded-lg bg-gray-50 px-3 py-1.5 text-sm text-gray-600">
           Items <b className="text-base">{report?.itemsSold ?? 0}</b>
         </span>
+        <span className="rounded-lg bg-emerald-50 px-3 py-1.5 text-sm text-emerald-700">
+          Profit <b className="text-base">{formatINR(report?.totalProfit ?? 0)}</b>
+        </span>
       </div>
 
       <SalesBars report={report} />
+
+      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-4">
+        <span className="mr-auto text-xs text-gray-400">Download this report</span>
+        <button
+          onClick={() => report && downloadSalesCsv(report, bills ?? [], period)}
+          disabled={!canDownload}
+          className="inline-flex items-center gap-1.5 rounded-md border border-green-200 px-3 py-1.5 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-40"
+        >
+          <FileSpreadsheet className="h-4 w-4" /> Excel (CSV)
+        </button>
+        <button
+          onClick={handlePdf}
+          disabled={!canDownload || downloading}
+          className="inline-flex items-center gap-1.5 rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
+        >
+          {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+          {downloading ? 'Preparing…' : 'PDF'}
+        </button>
+      </div>
     </div>
   )
 }
@@ -232,10 +273,28 @@ export default function Dashboard() {
 
   const staffCount = users?.length ?? 0
   const salesTotal = bills?.reduce((s, b) => s + b.total, 0) ?? 0
+  const profitTotal =
+    bills?.reduce((sum, b) => {
+      const cost = (b.items ?? []).reduce(
+        (c, it) => c + Number(it.costPrice ?? 0) * it.quantity,
+        0
+      )
+      return sum + b.total - cost
+    }, 0) ?? 0
+
+  // Expired products plus anything expiring within the next two months (60 days).
+  const expiringSoon = (products ?? [])
+    .flatMap((p) => {
+      if (!p.expiryDate) return []
+      const days = Math.ceil((Date.parse(p.expiryDate) - Date.now()) / 86400000)
+      return days <= 60 ? [{ name: p.name, days }] : []
+    })
+    .sort((a, b) => a.days - b.days)
 
   const stats = [
     { label: 'Products', value: products?.length ?? 0, icon: <Package className="h-6 w-6" />, to: '/admin/products', gradient: 'from-emerald-500 to-teal-600' },
-    { label: 'Total Sales', value: `$${salesTotal.toFixed(0)}`, icon: <Wallet className="h-6 w-6" />, gradient: 'from-sky-500 to-blue-600' },
+    { label: 'Total Sales', value: formatINR(salesTotal), icon: <Wallet className="h-6 w-6" />, gradient: 'from-sky-500 to-blue-600' },
+    { label: 'Profit', value: formatINR(profitTotal), icon: <TrendingUp className="h-6 w-6" />, gradient: 'from-rose-500 to-pink-600' },
     { label: 'Low Stock', value: lowStock?.length ?? 0, icon: <AlertTriangle className="h-6 w-6" />, to: '/admin/stock', gradient: 'from-amber-500 to-orange-600' },
     { label: 'Staff', value: staffCount, icon: <Users className="h-6 w-6" />, to: '/admin/staff', gradient: 'from-violet-500 to-purple-600' },
   ]
@@ -243,13 +302,41 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map((s) => <StatCard key={s.label} {...s} />)}
       </div>
 
+      {/* Expiry alert: already expired or expiring within 2 months */}
+      {expiringSoon.length > 0 && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-amber-900">
+                {expiringSoon.length} product{expiringSoon.length === 1 ? '' : 's'} expired or
+                expiring within 2 months
+              </p>
+              <p className="mt-1 text-xs text-amber-800">
+                {expiringSoon
+                  .slice(0, 4)
+                  .map((x) => `${x.name} (${x.days < 0 ? 'expired' : `${x.days}d`})`)
+                  .join(' · ')}
+                {expiringSoon.length > 4 ? ` · +${expiringSoon.length - 4} more` : ''}
+              </p>
+              <Link
+                to="/admin/products"
+                className="mt-1 inline-block text-xs font-semibold text-amber-900 underline"
+              >
+                Review products and update expiry dates
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sales report + payment split */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3"><ReportCard /></div>
+        <div className="lg:col-span-3"><ReportCard bills={bills} /></div>
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm lg:col-span-2">
           <h3 className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-gray-400">
             <CreditCard className="h-4 w-4" /> Payments
@@ -312,7 +399,7 @@ export default function Dashboard() {
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
                     {bill.paymentMethod || '—'}
                   </span>
-                  <span className="w-20 text-right font-bold text-gray-900">${bill.total.toFixed(2)}</span>
+                  <span className="w-20 text-right font-bold text-gray-900">{formatINR(bill.total)}</span>
                 </div>
               ))}
             </div>
@@ -344,7 +431,7 @@ export default function Dashboard() {
                 <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${ORDER_STATUS[order.status] ?? 'bg-gray-100 text-gray-500'}`}>
                   {order.status.replace(/_/g, ' ')}
                 </span>
-                <span className="w-20 text-right font-bold text-gray-900">${order.total.toFixed(2)}</span>
+                <span className="w-20 text-right font-bold text-gray-900">{formatINR(order.total)}</span>
               </div>
             ))}
           </div>

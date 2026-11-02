@@ -16,28 +16,29 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/restock-events")
+@RequestMapping("/api/restock-events")
 @RequiredArgsConstructor
 public class RestockEventController {
 
     private final RestockHistoryService restockHistoryService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<RestockEventDto>> getAll() {
         return ResponseEntity.ok(restockHistoryService.getAll());
     }
 
-    /** Pending deliveries — staff and admin both see these (in-app alert banner). */
+    /** Pending deliveries â€” staff and admin both see these (in-app alert banner). */
     @GetMapping("/pending")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<RestockEventDto>> getPending() {
         return ResponseEntity.ok(restockHistoryService.getPending());
     }
 
-    /** Confirms a pending delivery as received and adds its quantity to stock. */
+    /** Confirms a pending delivery as received and adds its quantity to stock.
+     *  Staff and admins can both confirm deliveries. */
     @PutMapping("/{id}/deliver")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<RestockEventDto> markDelivered(
             @PathVariable Long id,
             @RequestParam(required = false)

@@ -1,41 +1,23 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatINR } from '../../lib/format'
 import {
   AlertTriangle,
-  CalendarClock,
-  Check,
-  Copy,
-  ExternalLink,
   MessageCircle,
   PackagePlus,
   PackageSearch,
-  Phone,
   Search,
-  Send,
-  Truck,
 } from 'lucide-react'
 import { productApi } from '../../api/catalog'
 import { settingsApi } from '../../api/settings'
 import { restockHistoryApi } from '../../api/restockHistory'
 import { useProducts } from '../../hooks/useCatalog'
 import { getErrorMessage } from '../../api/auth'
+import Pagination from '../../components/Pagination'
 import RestockModal from '../../components/RestockModal'
-import type { Product, RestockHistoryEvent } from '../../types'
-
-const DELIVERY_LABELS: Record<string, string> = {
-  SUPPLIER: 'Supplier delivered',
-  COURIER: 'Courier',
-  SELF_PICKUP: 'Self pickup',
-  OTHER: 'Other',
-}
-
-const deliveryLabel = (method: string | null) =>
-  method ? DELIVERY_LABELS[method] ?? method : 'Delivery'
-
-const formatDay = (iso: string | null) =>
-  iso
-    ? new Date(`${iso}T00:00:00`).toLocaleDateString([], { dateStyle: 'medium' })
-    : '—'
+import { usePagination } from '../../hooks/usePagination'
+import type { Product } from '../../types'
 
 export default function Restock() {
   const queryClient = useQueryClient()
@@ -50,39 +32,11 @@ export default function Restock() {
     queryKey: ['pending-restocks'],
     queryFn: restockHistoryApi.getPending,
   })
-  const [deliveringId, setDeliveringId] = useState<number | null>(null)
-
   // Auto-restock toggle (persisted in the backend)
   const [autoRestockEnabled, setAutoRestockEnabled] = useState(true)
   const [stockMsg, setStockMsg] = useState<string | null>(null)
 
-  // WhatsApp alert number
-  const [phone, setPhone] = useState('')
-  const [phoneLoading, setPhoneLoading] = useState(false)
-  const [testLoading, setTestLoading] = useState(false)
-  const [phoneMsg, setPhoneMsg] = useState<{ ok: boolean; text: string } | null>(null)
-
-  // Meta Cloud API (real alerts)
-  const [metaEnabled, setMetaEnabled] = useState(false)
-  const [metaToken, setMetaToken] = useState('')
-  const [metaPhoneNumberId, setMetaPhoneNumberId] = useState('')
-  const [metaTemplateName, setMetaTemplateName] = useState('grocery_shop_restock_alert')
-  const [copied, setCopied] = useState(false)
-
-  const TEMPLATE_BODY =
-    'GroceryShop alert {{1}}: LOW STOCK - {{2}} (code {{3}}), only {{4}} left, minimum {{5}}. Price {{6}}. Supplier: {{7}}. {{8}}'
-
   useEffect(() => {
-    settingsApi
-      .getWhatsApp()
-      .then((s) => {
-        setPhone(s.ownerPhone)
-        setMetaEnabled(s.metaEnabled)
-        setMetaToken(s.metaToken ?? '')
-        setMetaPhoneNumberId(s.metaPhoneNumberId ?? '')
-        setMetaTemplateName(s.metaTemplateName || 'grocery_shop_restock_alert')
-      })
-      .catch(() => {})
     settingsApi
       .getStock()
       .then((s) => setAutoRestockEnabled(s.autoRestockEnabled))
@@ -134,30 +88,7 @@ export default function Restock() {
     return [...list].sort((a, b) => rank(a) - rank(b))
   }, [products, onlyLow, search])
 
-  const handleMarkDelivered = async (event: RestockHistoryEvent) => {
-    const today = new Date().toISOString().slice(0, 10)
-    const received =
-      window.prompt(
-        `Received date for ${event.productName ?? 'product'} (${event.quantity} units)?\nLeave blank for today (${today}).`,
-        today
-      ) ?? ''
-    if (received === '') return
-    setDeliveringId(event.id)
-    try {
-      await restockHistoryApi.deliver(event.id, received || undefined)
-      refresh()
-    } catch (err) {
-      alert(getErrorMessage(err))
-    } finally {
-      setDeliveringId(null)
-    }
-  }
-
-  const pendingDue = (event: RestockHistoryEvent) => {
-    if (!event.expectedDelivery) return false
-    const expected = new Date(`${event.expectedDelivery}T00:00:00`).getTime()
-    return Date.now() >= expected
-  }
+  const pager = usePagination(filtered, 10, `${search}|${onlyLow}`)
 
   const handleRestockAllLow = async () => {
     const items = products?.filter((p) => p.stock >= 0 && p.lowStock) ?? []
@@ -176,80 +107,17 @@ export default function Restock() {
     }
   }
 
-  const liveOn = metaEnabled && !!metaToken.trim() && !!metaPhoneNumberId.trim()
-
-  const handleSaveSettings = async (e: FormEvent) => {
-    e.preventDefault()
-    setPhoneLoading(true)
-    setPhoneMsg(null)
-    try {
-      const s = await settingsApi.updateWhatsApp({
-        ownerPhone: phone,
-        metaEnabled,
-        metaToken,
-        metaPhoneNumberId,
-        metaTemplateName,
-      })
-      setPhone(s.ownerPhone)
-      setMetaEnabled(s.metaEnabled)
-      setMetaToken(s.metaToken ?? '')
-      setMetaPhoneNumberId(s.metaPhoneNumberId ?? '')
-      setMetaTemplateName(s.metaTemplateName || 'grocery_shop_restock_alert')
-      setPhoneMsg({
-        ok: true,
-        text:
-          s.metaEnabled && s.metaToken && s.metaPhoneNumberId
-            ? 'Settings saved - real Meta alerts are ON.'
-            : 'Settings saved - alerts are simulated (backend console only).',
-      })
-    } catch (err) {
-      setPhoneMsg({ ok: false, text: getErrorMessage(err) })
-    } finally {
-      setPhoneLoading(false)
-    }
-  }
-
-  const copyTemplate = async () => {
-    try {
-      await navigator.clipboard.writeText(TEMPLATE_BODY)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      setCopied(false)
-    }
-  }
-
-  const handleTest = async () => {
-    setTestLoading(true)
-    setPhoneMsg(null)
-    try {
-      const r = await settingsApi.sendTest()
-      setPhoneMsg({ ok: r.status !== 'FAILED', text: r.detail })
-    } catch (err) {
-      setPhoneMsg({ ok: false, text: getErrorMessage(err) })
-    } finally {
-      setTestLoading(false)
-    }
-  }
-
-  // Free click-to-chat: no provider or setup — opens WhatsApp with a ready message.
-  const waLink = phone
-    ? `https://wa.me/${phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-        'GroceryShop test alert: WhatsApp alerts are set up. Low-stock notices include product name, code, price, quantity and the auto-restocked amount.'
-      )}`
-    : '#'
-
   if (isLoading) return <div className="text-center py-16">Loading...</div>
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-xl font-bold text-gray-900">Restock</h2>
         {lowProducts.length > 0 && (
           <button
             onClick={handleRestockAllLow}
             disabled={bulkLoading}
-            className="inline-flex items-center gap-1 px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 font-medium disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-md text-white bg-green-600 hover:bg-green-700 font-medium disabled:opacity-50 w-full sm:w-auto"
           >
             <PackagePlus className="h-4 w-4" />
             {bulkLoading ? 'Restocking…' : `Restock All Low (${lowProducts.length})`}
@@ -263,7 +131,13 @@ export default function Restock() {
           {lowProducts.length} product{lowProducts.length === 1 ? '' : 's'} at or below minimum stock
           {autoRestockEnabled
             ? ' — auto-restock topped them up at sale time, or top them up manually below.'
-            : ' — auto-restock is OFF, so top them up manually or schedule a delivery below.'}
+            : ' — auto-restock is OFF, so top them up manually or schedule a delivery below.'}{' '}
+          {pending !== undefined && pending.length > 0 && (
+            <Link to="/admin/orders" className="underline font-semibold">
+              {pending.length} delivery{pending.length === 1 ? '' : 's'} pending - confirm in
+              Deliveries.
+            </Link>
+          )}
         </div>
       )}
 
@@ -303,217 +177,27 @@ export default function Restock() {
         </div>
       </div>
 
-      {/* Pending deliveries — expected date set, stock added only on confirmation */}
-      {pending !== undefined && pending.length > 0 && (
-        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarClock className="h-4 w-4 text-amber-700" />
-            <h3 className="text-sm font-bold text-amber-900">
-              Pending deliveries ({pending.length}) — stock NOT added yet
-            </h3>
-          </div>
-          <div className="space-y-2">
-            {pending.map((event) => {
-              const due = pendingDue(event)
-              return (
-                <div
-                  key={event.id}
-                  className={`flex flex-col sm:flex-row sm:items-center gap-2 rounded-lg border p-2.5 ${
-                    due ? 'border-red-300 bg-red-50' : 'border-amber-200 bg-white'
-                  }`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-gray-900">
-                      {event.productName ?? 'Product'}
-                      <span className="ml-2 font-normal text-gray-500">
-                        +{event.quantity} units
-                      </span>
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Expected {formatDay(event.expectedDelivery)} ·{' '}
-                      {event.deliveryMethod ? deliveryLabel(event.deliveryMethod) : 'Delivery'}
-                    </p>
-                  </div>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold ${
-                      due ? 'bg-red-600 text-white' : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {due ? 'Due / overdue' : 'Upcoming'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleMarkDelivered(event)}
-                    disabled={deliveringId === event.id}
-                    className="shrink-0 inline-flex items-center gap-1 rounded-md bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    <Truck className="h-3.5 w-3.5" />
-                    {deliveringId === event.id ? 'Adding…' : 'Mark Delivered'}
-                  </button>
-                </div>
-              )
-            })}
-          </div>
-          <p className="mt-3 text-[11px] text-amber-800">
-            Stock is only added when you click Mark Delivered (even on the expected date — deliveries
-            can run late). You and your staff get an in-app reminder banner, and the admin gets a
-            daily WhatsApp reminder until the delivery is confirmed.
-          </p>
-        </div>
-      )}
-
-      {/* WhatsApp alerts */}
-      <form onSubmit={handleSaveSettings} className="mb-6 rounded-xl bg-white shadow-sm p-4 space-y-4">
-        <div className="flex flex-col md:flex-row md:items-end gap-3">
-          <div className="flex items-center gap-2 flex-1">
-            <Phone className="h-5 w-5 text-green-600 shrink-0" />
-            <div className="flex-1">
-              <label htmlFor="wa-phone" className="block text-sm font-medium text-gray-700 mb-1">
-                WhatsApp alert number (admin)
-              </label>
-              <input
-                id="wa-phone"
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91XXXXXXXXXX"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-              <p className="mt-1 text-xs text-gray-400">
-                Low-stock alerts go to this number and to each product's supplier.
+      {/* WhatsApp alerts — configured on the Settings page */}
+      <div className="mb-6 rounded-xl bg-white shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 justify-between">
+          <div className="flex items-start gap-3">
+            <MessageCircle className="h-5 w-5 text-green-600 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="text-sm font-semibold text-gray-800">Low-stock WhatsApp alerts</h3>
+              <p className="mt-0.5 text-xs text-gray-500">
+                The admin and each product's supplier get a WhatsApp alert when an item hits its
+                minimum stock. Configure the alert number, Meta Cloud API and template in Settings.
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            <button
-              type="submit"
-              disabled={phoneLoading}
-              className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-md text-sm font-semibold text-white bg-green-600 hover:bg-green-700 disabled:opacity-50"
-            >
-              <MessageCircle className="h-4 w-4" />
-              {phoneLoading ? 'Saving…' : 'Save Settings'}
-            </button>
-            <button
-              type="button"
-              onClick={handleTest}
-              disabled={testLoading}
-              className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-md text-sm font-semibold text-white bg-gray-700 hover:bg-gray-800 disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-              {testLoading ? 'Sending…' : 'Test Alert'}
-            </button>
-            <a
-              href={waLink}
-              target="_blank"
-              rel="noreferrer"
-              title="Opens WhatsApp with a pre-filled message on your phone - free, no setup"
-              className="inline-flex items-center justify-center gap-1 px-4 py-2 rounded-md text-sm font-semibold text-green-700 border border-green-600 hover:bg-green-50"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open WhatsApp
-            </a>
-          </div>
+          <Link
+            to="/admin/settings"
+            className="shrink-0 inline-flex items-center gap-1 px-4 py-2 rounded-md text-sm font-semibold text-white bg-gray-700 hover:bg-gray-800"
+          >
+            Alerts settings
+          </Link>
         </div>
-
-        <div className="border-t pt-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <h3 className="text-sm font-semibold text-gray-700">
-              Real alerts via Meta Cloud API (WhatsApp Business Platform)
-            </h3>
-            {liveOn ? (
-              <span className="rounded-full bg-green-100 text-green-700 px-2.5 py-0.5 text-xs font-semibold">
-                Live - sending via Meta
-              </span>
-            ) : (
-              <span className="rounded-full bg-amber-100 text-amber-700 px-2.5 py-0.5 text-xs font-semibold">
-                Simulated - console only
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-gray-500">
-            Free to set up and includes 1,000 free service conversations per month. Enter your token and phone
-            number ID below, create the message template, then enable real low-stock alerts. Left off, alerts are
-            logged to the backend console only.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2 mt-3">
-            <div>
-              <label htmlFor="meta-token" className="block text-xs font-medium text-gray-600 mb-1">
-                Meta access token
-              </label>
-              <input
-                id="meta-token"
-                type="password"
-                value={metaToken}
-                onChange={(e) => setMetaToken(e.target.value)}
-                placeholder="Paste your long-lived system user token"
-                autoComplete="off"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="meta-phone-id" className="block text-xs font-medium text-gray-600 mb-1">
-                Phone number ID (your business WhatsApp number)
-              </label>
-              <input
-                id="meta-phone-id"
-                type="text"
-                value={metaPhoneNumberId}
-                onChange={(e) => setMetaPhoneNumberId(e.target.value)}
-                placeholder="e.g. 123456789012345"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div>
-              <label htmlFor="meta-template" className="block text-xs font-medium text-gray-600 mb-1">
-                Message template name
-              </label>
-              <input
-                id="meta-template"
-                type="text"
-                value={metaTemplateName}
-                onChange={(e) => setMetaTemplateName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-              />
-            </div>
-            <div className="flex items-end pb-1">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={metaEnabled}
-                  onChange={(e) => setMetaEnabled(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                />
-                Send real alerts when low stock is hit
-              </label>
-            </div>
-          </div>
-          <div className="mt-3 rounded-md bg-gray-50 border border-gray-200 p-3">
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold text-gray-600">
-                Template body to create in Meta (category: Utility):
-              </p>
-              <button
-                type="button"
-                onClick={copyTemplate}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 hover:text-green-800"
-              >
-                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                {copied ? 'Copied' : 'Copy'}
-              </button>
-            </div>
-            <p className="mt-1 font-mono text-[11px] text-gray-600 break-words">{TEMPLATE_BODY}</p>
-            <p className="mt-2 text-[11px] text-gray-400">
-              In Business Manager, open WhatsApp Manager then Message templates, create a template with category
-              Utility and language English (en), with the body above. Name must match the template name field
-              exactly. After approval, enable real alerts and test.
-            </p>
-          </div>
-        </div>
-
-        {phoneMsg && (
-          <p className={`text-sm ${phoneMsg.ok ? 'text-green-600' : 'text-red-600'}`}>{phoneMsg.text}</p>
-        )}
-      </form>
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3 mb-4">
@@ -543,7 +227,7 @@ export default function Restock() {
           No products found{onlyLow ? ' below minimum stock' : ''}.
         </p>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden table-scroll table-scroll-wide">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-gray-50">
@@ -556,7 +240,7 @@ export default function Restock() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((product) => {
+              {pager.pageItems.map((product) => {
                 const out = product.stock <= 0
                 const low = !out && product.lowStock
                 const rowCls = out
@@ -595,7 +279,7 @@ export default function Restock() {
                     </td>
                     <td className={`px-4 py-3 ${bodyCol}`}>{product.categoryName ?? '-'}</td>
                     <td className={`px-4 py-3 ${bodyCol}`}>{product.supplierName ?? '-'}</td>
-                    <td className={`px-4 py-3 ${bodyCol}`}>${product.price.toFixed(2)}</td>
+                    <td className={`px-4 py-3 ${bodyCol}`}>{formatINR(product.price)}</td>
                     <td className="px-4 py-3">
                       <span className={`text-sm font-bold ${stockMain}`}>{product.stock}</span>{' '}
                       <span className={`text-[11px] ${stockSub}`}>
@@ -622,6 +306,7 @@ export default function Restock() {
               })}
             </tbody>
           </table>
+          <Pagination {...pager} itemLabel="products" />
           <p className="px-4 py-3 text-xs text-gray-400">
             {autoRestockEnabled
               ? 'Automatic restock is ON — when a sale drops an item to its minimum, the sold quantity is added back and the admin + supplier get a WhatsApp alert. Fully out of stock items are greyed out, cannot be billed and are listed last.'

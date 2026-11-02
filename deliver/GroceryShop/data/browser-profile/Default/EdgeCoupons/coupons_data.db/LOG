@@ -1,0 +1,6 @@
+2026/10/24-17:01:27.887 4950 Reusing MANIFEST C:\Users\sasid\OneDrive\Documents\GitHub\Groceryshop\deliver\GroceryShop\data\browser-profile\Default\EdgeCoupons/coupons_data.db/MANIFEST-000001
+2026/10/24-17:01:27.888 4950 Recovering log #7
+2026/10/24-17:01:27.889 4950 Reusing old log C:\Users\sasid\OneDrive\Documents\GitHub\Groceryshop\deliver\GroceryShop\data\browser-profile\Default\EdgeCoupons/coupons_data.db/000007.log 
+2026/10/24-17:01:28.089 41bc Level-0 table #11: started
+2026/10/24-17:01:28.094 41bc Level-0 table #11: 683399 bytes OK
+2026/10/24-17:01:28.097 41bc Delete type=0 #7

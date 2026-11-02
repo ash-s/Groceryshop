@@ -1,0 +1,1 @@
+import{t as e}from"./client-DTJdnalP.js";var t={getAll:async()=>(await e.get(`/restock-events`)).data,getPending:async()=>(await e.get(`/restock-events/pending`)).data,deliver:async(t,n)=>(await e.put(`/restock-events/${t}/deliver`,null,{params:n?{receivedDate:n}:{}})).data};export{t};

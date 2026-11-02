@@ -76,6 +76,11 @@ public class RestockEvent {
     @Column(name = "cost_per_unit", precision = 10, scale = 2)
     private BigDecimal costPerUnit;
 
+    /** Which supplier this purchase came from (manual restocks only). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "supplier_id")
+    private com.groceryshop.supplier.Supplier supplier;
+
     @Column(length = 500)
     private String notes;
 

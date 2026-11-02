@@ -1,0 +1,13 @@
+{"logTime": "1023/182329", "session": "START"}
+{"logTime": "1023/182329", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionServiceEvent: kStart - {\r\n   \"crashed\": false,\r\n   \"type\": 0\r\n}\r\n"}
+{"logTime": "1023/182445", "session": "START"}
+{"logTime": "1023/182445", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionServiceEvent: kStart - {\r\n   \"crashed\": true,\r\n   \"type\": 0\r\n}\r\n"}
+{"logTime": "1023/182445", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:638 operator()", "message": "No session files found for SessionType SessionRestore"}
+{"logTime": "1023/182445", "level": "INFO", "location": "components\\sessions\\core\\session_service_commands.cc:837 CreateTabsAndWindows", "message": "Commands to decode: 0"}
+{"logTime": "1023/182445", "level": "INFO", "location": "components\\sessions\\core\\session_service_commands.cc:2223 RestoreSessionFromCommands", "message": "Parse from commands results: Tabs 0, groups 0, windows 0, discarded windows 0"}
+{"logTime": "1023/182445", "level": "INFO", "location": "components\\sessions\\core\\session_service_commands.cc:598 EdgeLogDecodeResults", "message": "All tabs/windows/tab groups decoded"}
+{"logTime": "1023/182445", "level": "INFO", "location": "components\\sessions\\core\\session_service_commands.cc:600 EdgeLogDecodeResults", "message": "Decoded windows: 0, discarded windows: 0"}
+{"logTime": "1023/183227", "session": "END"}
+{"logTime": "1024/113124", "session": "START"}
+{"logTime": "1024/113124", "level": "INFO", "location": "chrome\\browser\\sessions\\session_service_log.cc:326 EdgeLogSessionServiceMessage", "message": "SessionServiceEvent: kStart - {\r\n   \"crashed\": true,\r\n   \"type\": 0\r\n}\r\n"}
+{"logTime": "1024/113124", "level": "INFO", "location": "components\\sessions\\core\\command_storage_manager.cc:644 operator()", "message": "No session files found for SessionType SessionRestore"}

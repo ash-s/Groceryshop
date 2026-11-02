@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/upload")
+@RequestMapping("/api/upload")
 public class FileUploadController {
 
     private static final long MAX_SIZE = 5L * 1024 * 1024; // 5 MB
@@ -35,7 +35,7 @@ public class FileUploadController {
             throw new BadRequestException("Please choose an image file to upload.");
         }
         if (file.getSize() > MAX_SIZE) {
-            throw new BadRequestException("Image is too large — maximum size is 5 MB.");
+            throw new BadRequestException("Image is too large â€” maximum size is 5 MB.");
         }
 
         String contentType = file.getContentType();

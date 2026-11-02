@@ -2,15 +2,13 @@ import { Link } from 'react-router-dom'
 import { CalendarClock } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { restockHistoryApi } from '../api/restockHistory'
-import { useAuth } from '../context/AuthContext'
 
 /**
  * In-app alert for pending deliveries (expected delivery date set). Shown to both
- * admin and staff on every admin page; stock is only added once the admin clicks
+ * admin and staff on every admin page; stock is only added once someone clicks
  * Mark Delivered, so any delivery that's due or overdue gets attention here.
  */
 export default function PendingDeliveryBanner() {
-  const { isAdmin } = useAuth()
   const { data: pending } = useQuery({
     queryKey: ['pending-restocks'],
     queryFn: restockHistoryApi.getPending,
@@ -55,14 +53,12 @@ export default function PendingDeliveryBanner() {
         ))}
         {pending.length > 4 && <li>and {pending.length - 4} more…</li>}
       </ul>
-      {isAdmin && (
-        <Link
-          to="/admin/restock"
-          className="mt-1 inline-block font-semibold text-green-700 hover:text-green-800"
-        >
-          Confirm deliveries on the Restock page
-        </Link>
-      )}
+      <Link
+        to="/admin/orders"
+        className="mt-1 inline-block font-semibold text-green-700 hover:text-green-800"
+      >
+        Confirm deliveries on the Deliveries page
+      </Link>
     </div>
   )
 }

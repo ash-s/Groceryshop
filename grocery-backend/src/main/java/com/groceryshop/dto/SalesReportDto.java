@@ -14,4 +14,6 @@ public class SalesReportDto {
     private BigDecimal totalSales;
     private long billCount;
     private long itemsSold;
+    /** Profit = (selling - buying) over the period, net of bill discounts. */
+    private BigDecimal totalProfit;
 }

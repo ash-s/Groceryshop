@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { Package } from 'lucide-react'
 import { useMyOrders } from '../hooks/useOrders'
 import OrderStatusBadge from '../components/OrderStatusBadge'
-import { formatDate } from '../lib/format'
+import { formatDate, formatINR } from '../lib/format'
 
 export default function Orders() {
   const { data: orders, isLoading } = useMyOrders()
@@ -47,7 +47,7 @@ export default function Orders() {
             </p>
 
             <div className="flex items-center justify-between">
-              <span className="font-bold text-green-700">${order.total.toFixed(2)}</span>
+              <span className="font-bold text-green-700">{formatINR(order.total)}</span>
               <Link
                 to={`/orders/${order.id}`}
                 className="text-green-600 hover:text-green-700 font-medium text-sm"

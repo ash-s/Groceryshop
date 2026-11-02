@@ -65,6 +65,7 @@ export default function Login() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <PasswordInput
               required
+              autoComplete="new-password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />

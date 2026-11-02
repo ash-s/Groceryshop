@@ -19,12 +19,14 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/admin/suppliers")
+@RequestMapping("/api/admin/suppliers")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class SupplierController {
 
     private final SupplierService supplierService;
+    private final com.groceryshop.product.ProductService productService;
+    private final com.groceryshop.restock.RestockHistoryService restockHistoryService;
 
     @GetMapping
     public ResponseEntity<List<SupplierDto>> getAll() {
@@ -34,6 +36,16 @@ public class SupplierController {
     @GetMapping("/{id}")
     public ResponseEntity<SupplierDto> getById(@PathVariable Long id) {
         return ResponseEntity.ok(supplierService.getById(id));
+    }
+
+    @GetMapping("/{id}/products")
+    public ResponseEntity<java.util.List<com.groceryshop.dto.ProductDto>> getProducts(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getBySupplier(id));
+    }
+
+    @GetMapping("/{id}/purchases")
+    public ResponseEntity<java.util.List<com.groceryshop.dto.RestockEventDto>> getPurchases(@PathVariable Long id) {
+        return ResponseEntity.ok(restockHistoryService.getBySupplier(id));
     }
 
     @PostMapping

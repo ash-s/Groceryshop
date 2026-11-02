@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { AlertTriangle, Salad } from 'lucide-react'
+import { formatINR } from '../lib/format'
 import { useProduct } from '../hooks/useCatalog'
 import { useAddToCart } from '../hooks/useCart'
 import { useAuth } from '../context/AuthContext'
@@ -44,7 +45,7 @@ export default function ProductDetail() {
 
         <div>
           <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-          <p className="text-green-700 text-2xl font-bold mb-2">${product.price.toFixed(2)}</p>
+          <p className="text-green-700 text-2xl font-bold mb-2">{formatINR(product.price)}</p>
 
           {product.categoryName && (
             <p className="text-sm text-gray-500 mb-4">

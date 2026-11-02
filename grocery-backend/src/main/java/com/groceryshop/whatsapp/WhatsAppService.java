@@ -79,8 +79,9 @@ public class WhatsAppService {
         for (Product product : lowStockProducts) {
             String supplierName = product.getSupplier() != null ? product.getSupplier().getName() : "N/A";
             String supplierPhone = product.getSupplier() != null ? product.getSupplier().getPhone() : "";
-            String code = product.getCode() != null ? product.getCode() : "-";
-            String price = String.format("$%.2f", product.getPrice());
+            String code = product.getBarcode() != null ? product.getBarcode()
+                    : (product.getCode() != null ? product.getCode() : "-");
+            String price = String.format("\u20B9%.2f", product.getPrice());
             Integer restocked = autoRestockQty.get(product.getId());
             String restockNote = restocked != null
                     ? " Auto-restocked +" + restocked + " from this sale."
@@ -179,6 +180,22 @@ public class WhatsAppService {
         params.add(supplier);
         params.add(note);
         return params;
+    }
+
+    /**
+     * Sends a free-form message (offer, price change, ...) to a customer on
+     * WhatsApp. Simulated (console only) until Meta alerts are configured.
+     */
+    public boolean sendCustomerMessage(String to, String customerName, String message) {
+        if (!notBlank(to)) {
+            return false;
+        }
+        if (!isMetaConfigured()) {
+            log.info("[SIMULATED WhatsApp -> customer {} ({})] {}", to, customerName, message);
+            return true;
+        }
+        List<String> params = templateParams("Offer", "-", "-", "-", "-", "GroceryShop", message);
+        return sendMetaTemplate(to, params);
     }
 
     private boolean sendMetaTemplate(String to, List<String> parameters) {
